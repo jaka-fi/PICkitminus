@@ -1,0 +1,7 @@
+Do not remove this file if you have installed PICkitminus under Program Files
+or similar location without write permission.
+
+This file indicates that the .ini file should be saved to Appdata\Local
+directory. Without this file, the .ini file will be saved to same directory
+where the PICkitminus.exe file is. This allows to make 'portable' version
+of PICkitminus, so the settings are kept in same directory as the software.
