@@ -5,7 +5,7 @@ VisualStudioVersion = 16.0.31313.79
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PICkitminus", "PICkit2V2\PICkitminus.csproj", "{FD0E24D8-5714-4755-8E1A-C2C739824579}"
 EndProject
-Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "PICkitminus_setup_net20", "PICkitminus_setup_net35\PICkitminus_setup_net35.vdproj", "{26BD7FCB-8294-4BF5-90D4-A3568D3F79F4}"
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "PICkitminus_setup_net20", "PICkitminus_setup\PICkitminus_setup_net20.vdproj", "{26BD7FCB-8294-4BF5-90D4-A3568D3F79F4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

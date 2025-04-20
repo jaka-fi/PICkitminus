@@ -697,6 +697,14 @@ using Pk3h = PICkit2V2.PK3Helpers;
 //          operating system
 // Bug Fix: Fix program entry with PIC18F_K80_K90_K22 family and PICkit3 clone.
 //          Fix done in device file
+//
+// version 3.27.01 - 20 Apr 2025 JAKA
+// Feature: .ini file location is determined based on InstallDir.txt file. If this
+//          file is found at same directory where the program was launched, the .ini
+//          file will be saved to AppData\Local as it has been for some years already
+//          Otherwise, the .ini file location will be the directory where the program
+//          was launched from. This allows to make 'portable' version of the software,
+//          where the settings will be kept in same directory as the software.
 
 
 
@@ -748,7 +756,7 @@ namespace PICkit2V2
 		}
 		public static float ScalefactW = 1F;   // scaling factors for dealing with non-standard DPI
 		public static float ScalefactH = 1F;
-		public static string HomeDirectory = ".";	// Declared default value 1.1.2023
+		public static string HomeDirectory = ".";   // Declared default value 1.1.2023
 		public static byte slowSpeedICSP = 4; // default value
 		public static bool PlaySuccessWav = false;
 		public static string SuccessWavFile = "\\Sounds\\success.wav";
@@ -756,9 +764,6 @@ namespace PICkit2V2
 		public static string WarningWavFile = "\\Sounds\\warning.wav";
 		public static bool PlayErrorWav = false;
 		public static string ErrorWavFile = "\\Sounds\\error.wav";
-		// public static Thread t;
-		// public static bool vddErrorDisable = false;
-
 		//private static int[] familyMenuTable;   // Keeps track of which menu index is which family index
 		private static bool selfPoweredTarget;
 		private static KONST.StatusColor statusWindowColor = Constants.StatusColor.normal;
@@ -795,7 +800,6 @@ namespace PICkit2V2
 		private bool mainWinOwnsMem = true;
 		private bool usePE33 = true;
 		private bool usePE24 = true;
-		// private bool useLVP = false;
 		private bool blockingReadEnabled = false;
 		private bool deviceVerification = true;
 		private byte ptgMemory = 0; // 128K default
@@ -807,8 +811,8 @@ namespace PICkit2V2
 		private string lastBaudRate = "";
 		float lastSetVdd;
 		private System.Media.SoundPlayer wavPlayer = new System.Media.SoundPlayer();
-		
-        [DllImport("user32.dll")]
+
+		[DllImport("user32.dll")]
 		static extern Int16 FlashWindowEx(ref FLASHWINFO pwfi);
 		[DllImport("user32.dll")]
 		public static extern void DisableProcessWindowsGhosting();      // 22.7.2021, v3.20.05 JAKA
@@ -896,144 +900,19 @@ namespace PICkit2V2
 
 			uartWindow.VddCallback = new DelegateVddCallback(this.SetVddState);
 			logicWindow.VddCallback = new DelegateVddCallback(this.SetVddState);
-			/*
-			if (!detectPICkit2(KONST.ShowMessage, true, true))
-			{ // if we don't find it, wait a bit and give it another chance.
-				if (bootLoad)
-					return;
-				if (!oldFirmware)
-				{
-					Thread.Sleep(3000);
-					if (!detectPICkit2(KONST.ShowMessage, true, true))
-					{
-						return;
-					}
-				}
-				else
-				{
-					TestMemoryOpen = false;
-					timerDLFW.Enabled = true;
-					return;
-				}
-			}
-			
-			setMenuVisibilities();
-			
-			partialEnableGUIControls();
-			
-			//if (!Pk2.isPK3)          // TODO: PICkit 2 only for now
-				Pk2.ExitUARTMode(); // Just in case.
-			Pk2.VddOff();
-			Pk2.SetVDDVoltage(3.3F, 0.85F, false);
 
-			if (autoDetectToolStripMenuItem.Checked)
-			{
-				lookForPoweredTarget(KONST.NoMessage);
-			}
-			
-			if (searchOnStartup && Pk2.DetectDevice(KONST.SEARCH_ALL_FAMILIES, true, chkBoxVddOn.Checked))
-			{
-				setGUIVoltageLimits(true);
-				Pk2.SetVDDVoltage((float)numUpDnVDD.Value, 0.85F, false);
-				// The text displays below don't work, probably because window not yet created
-				// If used without += (just =) then works.
-				//if (Pk2.FamilyIsEEPROM())
-				//	displayStatusWindow.Text += "\nEEPROM Device Found.";
-				//else
-				//	displayStatusWindow.Text += "\nPIC Device Found.";
-				fullEnableGUIControls();
-			}
-			else
-			{
-				for (int i = 0; i < Pk2.DevFile.Info.NumberFamilies; i++)
-				{
-					if (Pk2.DevFile.Families[i].FamilyName == lastFamily)
-					{
-						Pk2.SetActiveFamily(i);
-						if (!Pk2.DevFile.Families[i].PartDetect)
-						{ // families with listed parts
-							buildDeviceSelectDropDown(i);
-							comboBoxSelectPart.Visible = true;
-							comboBoxSelectPart.SelectedIndex = 0;
-							displayDevice.Visible = true;
-						}
-					}
-				}
-				// Set unsupported part to voltages of first part in the selected family
-				for (int p = 1; p < Pk2.DevFile.Info.NumberParts; p++)
-				{ // start at 1 so don't search Unsupported Part
-					if (Pk2.DevFile.PartsList[p].Family == Pk2.GetActiveFamily())
-					{
-						Pk2.DevFile.PartsList[0].VddMax = Pk2.DevFile.PartsList[p].VddMax;
-						Pk2.DevFile.PartsList[0].VddMin = Pk2.DevFile.PartsList[p].VddMin;
-						break;
-					}
-				}
-				setGUIVoltageLimits(true);
-			}
-			
-			if ((lastSetVdd != 0F) && (Pk2.DevFile.Families[Pk2.GetActiveFamily()].FamilyName == lastFamily)
-				&& !selfPoweredTarget)
-			{ // if there was a saved VDD and the part family is the same
-				if (lastSetVdd > (float)numUpDnVDD.Maximum)
-				{
-					lastSetVdd = (float)numUpDnVDD.Maximum;
-				}
-				if (lastSetVdd < (float)numUpDnVDD.Minimum)
-				{
-					lastSetVdd = (float)numUpDnVDD.Minimum;
-				}
-				numUpDnVDD.Value = (decimal)lastSetVdd;
-				Pk2.SetVDDVoltage((float)numUpDnVDD.Value, 0.85F, true);
-			}
-
-			checkForPowerErrors();
-			
-			if (TestMemoryEnabled)
-			{
-				toolStripMenuItemTestMemory.Visible = true;
-				if (TestMemoryOpen)
-				{
-					openTestMemory();
-				}
-			}
-
-			if (!Pk2.DevFile.Families[Pk2.GetActiveFamily()].PartDetect)
-			{  // if drop-down select family, fully disable GUI
-				semiDisableGUIControls();
-				//UARTtoolStripMenuItem.Enabled = true;   // Except UART mode. Why it would need a device to be selected?
-				//revertToMPLABModeToolStripMenuItem.Enabled = true;  // Neither revert to MPLAB mode
-			}
-
-			if (multiWindow)
-			{
-				saveMultWinPMemOpen = multiWinPMemOpen;
-				toolStripMenuItemShowProgramMemory.Checked = false;
-				multiWinPMemOpen = false;
-				saveMultiWinEEMemOpen = multiWinEEMemOpen;
-				toolStripMenuItemShowEEPROMData.Checked = false;
-				multiWinEEMemOpen = false;
-			}
-
-			updateGUI(KONST.UpdateMemoryDisplays, KONST.EnableMclrCheckBox, KONST.DontUpdateProtections);
-
-			if (multiWindow)
-				timerInitalUpdate.Enabled = true;
-			*/
 			timerInitHW.Enabled = true;
 			displayStatusWindow.Text = "Searching PICkit devices...";
 			DisableProcessWindowsGhosting();        // 22.7.2021, v3.20.05 JAKA. Prevents lockup during long read/write
-			// t = new System.Threading.Thread(deviceReadHandler);
-			//srchpart();
 		}
-	
+
 		public void ExtCallUpdateGUI()
 		{
 			updateGUI(KONST.UpdateMemoryDisplays, KONST.EnableMclrCheckBox, KONST.DontUpdateProtections);
 		}
 
 		public void ExtCallShowText(string statusText)
-        {
+		{
 			oriText = this.displayStatusWindow.Text;
 			this.displayStatusWindow.Text += statusText;
 			this.Update();
@@ -1070,12 +949,12 @@ namespace PICkit2V2
 
 		public void ExtCallErase(bool writeOSCCAL)
 		{
-			eraseDeviceAll(writeOSCCAL, new uint[0],false);
+			eraseDeviceAll(writeOSCCAL, new uint[0], false);
 		}
 
 		public void ExtCallCalEraseWrite(uint[] calwords)
 		{
-			eraseDeviceAll(false, calwords,false);
+			eraseDeviceAll(false, calwords, false);
 		}
 
 		public bool ExtCallBlank()
@@ -1410,7 +1289,7 @@ namespace PICkit2V2
 		}
 
 		private void setMenuVisibilities()
-        {
+		{
 			this.openFWFile.InitialDirectory = HomeDirectory;
 			if (!Pk2.isPK3)
 			{
@@ -1464,18 +1343,16 @@ namespace PICkit2V2
 				{
 					this.Text = Pk2.ToolName + "- Programmer - " + unitID;
 				}
-				// troubleshhotToolStripMenuItem.Enabled = false;	// Enable troubleshoot for PK3 also, since it mostly works!
 				calibrateToolStripMenuItem.Text = "Set Unit ID...";
 				revertToMPLABModeToolStripMenuItem.Visible = true;
-				calAutoRegenerateToolStripMenuItem.Visible = true;	// Enable because support added for PK3 FW 2.10.00
+				calAutoRegenerateToolStripMenuItem.Visible = true;  // Enable because support added for PK3 FW 2.10.00
 				usersGuidePk3ToolStripMenuItem.Visible = true;
-				toolStripMenuItemProgToGo.Visible = true;		// Enable to test pk2go for pk3
-				toolStripMenuItemLogicToolUG.Visible = true;	// Show it because PICkit3 supports the logic tool
+				toolStripMenuItemProgToGo.Visible = true;       // Enable to test pk2go for pk3
+				toolStripMenuItemLogicToolUG.Visible = true;    // Show it because PICkit3 supports the logic tool
 				usersGuidePk2ToolStripMenuItem.Visible = false;
 				webPk2ToolStripMenuItem.Visible = true;
 				readMePk2ToolStripMenuItem.Visible = false;
-				// troubleshhotToolStripMenuItem.Visible = true;	// Enable troubleshoot for PK3 also, since it mostly works!
-
+				
 				usersGuidePk3ToolStripMenuItem.Visible = true;
 				readMePk3ToolStripMenuItem.Visible = true;
 				pICkit2GoToolStripMenuItem.Visible = true;      // Enable also this to test pk2go for pk3
@@ -1532,7 +1409,7 @@ namespace PICkit2V2
 		private bool detectPICkit2(bool showFound, bool detectMult, bool enableControls)
 		{
 			KONST.PICkit2USB detectResult;
-			
+
 			if (detectMult)
 			{ // look for PICkit 2's
 				pk2number = 0; // default to first device
@@ -1551,7 +1428,7 @@ namespace PICkit2V2
 			// connect to selected (or default) device
 			detectResult = Pk2.DetectPICkit2Device(pk2number, true);
 
-			setMenuVisibilities();	// Needed here also, so firmware upload dialog shows has correct filter for the connected PICkit type
+			setMenuVisibilities();  // Needed here also, so firmware upload dialog shows has correct filter for the connected PICkit type
 
 			if (detectResult == KONST.PICkit2USB.found)
 			{
@@ -1575,7 +1452,7 @@ namespace PICkit2V2
 				{
 					//string unitID = Pk2.UnitIDRead();
 					unitID = Pk2.GetSerialUnitID();
-					displayStatusWindow.BackColor = System.Drawing.SystemColors.Info;	// Needed to clear red background if was previously not found
+					displayStatusWindow.BackColor = System.Drawing.SystemColors.Info;   // Needed to clear red background if was previously not found
 
 					if (unitID[0] == '-')
 					{
@@ -1587,11 +1464,11 @@ namespace PICkit2V2
 						displayStatusWindow.Text = Pk2.ToolName + " connected.  ID = " + unitID;
 						this.Text = Pk2.ToolName + "- Programmer - " + unitID;
 						if (Pk2.isPKOB)
-                        {
+						{
 							string pkobDeviceStringTrim = Pk2.pkobDeviceString;
 							string unitIDTrim = unitID;
 							if (Pk2.pkobDeviceString.IndexOf('\0') != -1)
-                            {
+							{
 								pkobDeviceStringTrim = Pk2.pkobDeviceString.Substring(0, Pk2.pkobDeviceString.IndexOf('\0'));
 							}
 							if (unitID.IndexOf('\0') != -1)
@@ -1681,7 +1558,7 @@ namespace PICkit2V2
 				}
 				displayStatusWindow.BackColor = Color.Salmon;
 				displayStatusWindow.Text =
-					"PICkit2/3 not found.  Check USB connections and \nuse Tools->Check Communication to retry.";
+					"No PICkit devices found.  Check USB connections\nand use Tools -> Check Communication to retry.";
 				//				Pk2.ToolName + " not found.  Check USB connections and \nuse Tools->Check Communication to retry.";
 				return false;
 			}
@@ -1729,19 +1606,19 @@ namespace PICkit2V2
 			eepromDataMultiWin.DisplayDisable();
 			UARTtoolStripMenuItem.Enabled = false;
 			toolStripMenuItemLogicTool.Enabled = false;
-			
+
 			//if (Pk2.isPK3)
 			//{
-				downloadPICkit2FirmwareToolStripMenuItem.Enabled = false;
-				revertToMPLABModeToolStripMenuItem.Enabled = false;
+			downloadPICkit2FirmwareToolStripMenuItem.Enabled = false;
+			revertToMPLABModeToolStripMenuItem.Enabled = false;
 			//}
-			
+
 
 		}
 
 
-		private void semiDisableGUIControls()		// disable only functions which really need a device selected,
-		{											// but not functions which only require a pickit to be connected.
+		private void semiDisableGUIControls()       // disable only functions which really need a device selected,
+		{                                           // but not functions which only require a pickit to be connected.
 			importFileToolStripMenuItem.Enabled = false;
 			exportFileToolStripMenuItem.Enabled = false;
 			//programmerToolStripMenuItem.Enabled = false;
@@ -1832,13 +1709,13 @@ namespace PICkit2V2
 
 
 			// currently not supported in the PICkit 3 GUI
-			
+
 			if (!Pk2.isPKOB)
 			{
 				pICkit2GoToolStripMenuItem.Enabled = true;
 				//UARTtoolStripMenuItem.Enabled = true;
 			}
-			
+
 		}
 
 		private void semiEnableGUIControls()
@@ -1885,13 +1762,13 @@ namespace PICkit2V2
 			//}
 
 			// currently not supported in the PICkit 3 GUI
-			
+
 			if (!Pk2.isPKOB)
 			{
 				pICkit2GoToolStripMenuItem.Enabled = true;
 				// UARTtoolStripMenuItem.Enabled = true;
 			}
-			
+
 		}
 
 		private void fullEnableGUIControls()
@@ -1939,19 +1816,19 @@ namespace PICkit2V2
 
 
 			// currently not supported in the PICkit 3 GUI
-			
+
 			if (!Pk2.isPKOB)
 			{
 				pICkit2GoToolStripMenuItem.Enabled = true;
 				// UARTtoolStripMenuItem.Enabled = true;
 			}
-			
+
 		}
 
 		private void disableGUIForProgramming()
-        {
+		{
 			disableGUIControls(false);
-			
+
 			chkBoxVddOn.Enabled = false;
 			checkBoxMCLR.Enabled = false;
 			numUpDnVDD.Enabled = false;
@@ -1972,7 +1849,7 @@ namespace PICkit2V2
 		}
 
 		private void enableGUIAfterProgramming()
-        {
+		{
 			fullEnableGUIControls();
 
 			chkBoxVddOn.Enabled = true;
@@ -2083,7 +1960,7 @@ namespace PICkit2V2
 				viewChanged = false;
 			}
 
-			
+
 			// update family name
 			statusGroupBox.Text = Pk2.DevFile.Families[Pk2.GetActiveFamily()].FamilyName + " Configuration";
 
@@ -2169,16 +2046,16 @@ namespace PICkit2V2
 				if (Pk2.DevFile.PartsList[Pk2.ActivePart].UserIDWords > 0)
 				{
 					if (Pk2.PartHasCustomerOTP())
-                    {
+					{
 						labelUserIDs.Text = "Customer OTP:";
 					}
-                    else
-                    {
+					else
+					{
 						labelUserIDs.Text = "User IDs:";
 					}
 					labelUserIDs.Enabled = true;
 
-					if (Pk2.DevFile.PartsList[Pk2.ActivePart].UserIDWords < 9)	// was 9 originally, change to smaller, e.g. 3, to enable user ID button
+					if (Pk2.DevFile.PartsList[Pk2.ActivePart].UserIDWords < 9)  // was 9 originally, change to smaller, e.g. 3, to enable user ID button
 					{
 						displayUserIDs.Visible = true;
 						buttonShowIDMem.Visible = false;
@@ -2223,7 +2100,7 @@ namespace PICkit2V2
 			{
 				displayChecksum.Text = string.Format("{0:X4}", Pk2.ComputeChecksum(enableCodeProtectToolStripMenuItem.Checked, enableDataProtectStripMenuItem.Checked));
 			}
-			
+
 			/*
 			///////////////////////////////////
 			//////////////////////////////////
@@ -2321,13 +2198,13 @@ namespace PICkit2V2
 				checkBoxA0CS.Visible = true;
 				checkBoxA1CS.Visible = true;
 				checkBoxA2CS.Visible = true;
-				
+
 				if ((Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[KONST.CS_PINS_CFG] & 0x01) == 0x01)
 				{
 					checkBoxA0CS.Enabled = true;
 				}
-                else
-                {
+				else
+				{
 					checkBoxA0CS.Enabled = false;
 					checkBoxA0CS.Checked = false;
 				}
@@ -2496,8 +2373,8 @@ namespace PICkit2V2
 			//}
 
 			uint guiProgramMem = Pk2.DevFile.PartsList[Pk2.ActivePart].ProgramMem;
-			if (guiProgramMem >= 0x80000)	// If device has large program memory (SPI FLASH devices)
-            {
+			if (guiProgramMem >= 0x80000)   // If device has large program memory (SPI FLASH devices)
+			{
 				guiProgramMem = 0x100;      // update only the visible rows
 				dataGridProgramMemory.Enabled = false;
 				dataGridProgramMemory.ForeColor = System.Drawing.SystemColors.GrayText;
@@ -2505,8 +2382,8 @@ namespace PICkit2V2
 			else if (enableMclrBox)
 			{
 				//if (enableMclrBox)
-                //{
-					dataGridProgramMemory.Enabled = true;
+				//{
+				dataGridProgramMemory.Enabled = true;
 				//}
 				dataGridProgramMemory.ForeColor = System.Drawing.SystemColors.WindowText;
 			}
@@ -2849,7 +2726,7 @@ namespace PICkit2V2
 				}
 				checkBoxEEEnaShadow = true;
 				if (updateProtections)
-                {
+				{
 					enableDataProtectStripMenuItem.Enabled = true;
 				}
 				checkBoxEEDATAMemoryEnabledAlt.Enabled = true;
@@ -3095,7 +2972,7 @@ namespace PICkit2V2
 						enableDataProtectStripMenuItem.Enabled = true;
 					}
 				}
-				
+
 			}
 			if ((enableCodeProtectToolStripMenuItem.Checked) || (enableDataProtectStripMenuItem.Checked))
 			{
@@ -3118,7 +2995,7 @@ namespace PICkit2V2
 				labelCodeProtect.Visible = false;
 			}
 
-			
+
 			/////////////////////////////
 			//////////////////////////////
 			// update configuration display
@@ -3199,7 +3076,7 @@ namespace PICkit2V2
 			//////////////////////////////////////
 			//////////////////////////////////////
 			///////////////////////////////////////
-			
+
 
 			// Update EEPROM status label
 			if (!checkBoxProgMemEnabled.Checked)
@@ -3627,18 +3504,18 @@ namespace PICkit2V2
 				Pk2.SetVDDVoltage((float)numUpDnVDD.Value, 0.85F, false);  // ensure voltage set to expected value.
 				return true;
 			}
-			
+
 			if (!detectPICkit2(KONST.NoMessage, false, false))
 			{
 				return false;
 			}
-			
+
 			if (checkForPowerErrors())
 			{
 				updateGUI(KONST.DontUpdateMemDisplays, updateGuiControls, KONST.DontUpdateProtections);
 				return false;
 			}
-			
+
 			lookForPoweredTarget(KONST.ShowMessage & !timerAutoImportWrite.Enabled);
 			// don't show message if AutoImportWrite mode enabled.
 
@@ -3649,7 +3526,7 @@ namespace PICkit2V2
 				{
 					setGUIVoltageLimits(false);
 					if (updateGuiControls)
-                    {
+					{
 						fullEnableGUIControls();
 					}
 					updateGUI(KONST.DontUpdateMemDisplays, updateGuiControls, KONST.DontUpdateProtections);
@@ -3712,7 +3589,7 @@ namespace PICkit2V2
 				}
 			}
 			Pk2.SetVDDVoltage((float)numUpDnVDD.Value, 0.85F, false);  // ensure voltage set to expected value.
-			//if (!checkBoxEEMem.Enabled && (Pk2.DevFile.PartsList[Pk2.ActivePart].EEMem > 0))
+																	   //if (!checkBoxEEMem.Enabled && (Pk2.DevFile.PartsList[Pk2.ActivePart].EEMem > 0))
 			if (!checkBoxEEEnaShadow && (Pk2.DevFile.PartsList[Pk2.ActivePart].EEMem > 0))
 			{
 				// if previous part had no EEPROM and this one does, make sure EE checkbox is checked
@@ -3734,7 +3611,7 @@ namespace PICkit2V2
 		private void readDevice(object sender, EventArgs e)
 		{
 			//deviceRead();
-			
+
 			if (buttonRead.Text == "Read")
 			{
 				if (Pk2.FamilyIsKeeloq())
@@ -3749,7 +3626,7 @@ namespace PICkit2V2
 				{
 					return; // abort
 				}
-				labelCodeProtect.Visible = true;	// Added 6.2.2025 version 3.26.01 to fix display of code/data/all protect text
+				labelCodeProtect.Visible = true;    // Added 6.2.2025 version 3.26.01 to fix display of code/data/all protect text
 													// if read is the first action after starting the software. But no idea how the
 													// bug was introduced in 3.26.00.
 				updateGUI(KONST.UpdateMemoryDisplays, KONST.DontEnableMclrCheckBox, KONST.DontUpdateProtections);
@@ -3757,15 +3634,15 @@ namespace PICkit2V2
 				programmerOperationInProgress = true;
 				t.Start();
 			}
-            else
-            {
+			else
+			{
 				stopOperation = true;
 			}
 			// FlushMouseMessages();
 		}
 
 		private void deviceReadCaller()
-        {
+		{
 			disableGUIForProgramming();
 			buttonRead.Text = "Stop";
 			buttonRead.Enabled = true;
@@ -3774,7 +3651,7 @@ namespace PICkit2V2
 
 			buttonRead.Text = "Read";
 			stopOperation = false;
-			
+
 			enableGUIAfterProgramming();
 		}
 
@@ -3899,13 +3776,13 @@ namespace PICkit2V2
 										Pk2.DevFile.PartsList[Pk2.ActivePart].ProgMemRdWords, blockingReadEnabled);
 						}
 						else
-                        {
+						{
 							if (blockingReadEnabled)
 								Pk2.RunScriptUploadNoLen2(KONST.PROGMEM_RD, scriptRunsToFillUpload);
 							else
 								Pk2.RunScriptUploadNoLen(KONST.PROGMEM_RD, scriptRunsToFillUpload);
 						}
-						
+
 						Array.Copy(Pk2.Usb_read_array, 1, upload_buffer, 0, KONST.USB_REPORTLENGTH);
 						if (blockingReadEnabled)
 							Pk2.GetUpload();
@@ -4018,7 +3895,7 @@ namespace PICkit2V2
 				do
 				{
 					// if (bufferIndex >= 64)      // Should KONST.USB_REPORTLENGTH be used here(?)
-					if (bufferIndex >= (32*bytesPerWord))
+					if (bufferIndex >= (32 * bytesPerWord))
 					{
 						Pk2.RunScriptUploadNoLen(KONST.USERID_RD, 1);
 						Array.Copy(Pk2.Usb_read_array, 1, upload_buffer, 0, KONST.USB_REPORTLENGTH);
@@ -4092,7 +3969,7 @@ namespace PICkit2V2
 				displayStatusWindow.Text += "Config... ";
 				//displayStatusWindow.Update();            
 				this.Update();
-				
+
 				//if ((Pk2.DevFile.PartsList[Pk2.ActivePart].ProgMemPanelBufs & 0xf0) == 160
 				//	|| (Pk2.DevFile.PartsList[Pk2.ActivePart].ProgMemPanelBufs & 0xf0) == 176
 				//	|| (Pk2.DevFile.PartsList[Pk2.ActivePart].ProgMemPanelBufs & 0xf0) == 192)
@@ -4138,7 +4015,7 @@ namespace PICkit2V2
 				displayDataSource.Text = "Read from " + Pk2.DevFile.PartsList[Pk2.ActivePart].PartName;
 			}
 			else
-            {
+			{
 				displayStatusWindow.Text = "Read aborted!\nMemory buffers contain partially read data.";
 				statusWindowColor = Constants.StatusColor.yellow;
 				// update SOURCE box
@@ -4274,7 +4151,7 @@ namespace PICkit2V2
 
 			buttonErase.Text = "Erase";
 			stopOperation = false;
-			
+
 			enableGUIAfterProgramming();
 		}
 
@@ -4429,10 +4306,10 @@ namespace PICkit2V2
 					{
 						Thread.Sleep(1000);
 						elapsedEraseTime++;
-						if (elapsedEraseTime<typEraseTime)
-                        {
+						if (elapsedEraseTime < typEraseTime)
+						{
 							progressBar1.PerformStep();
-                        }
+						}
 						Pk2.RunScript(KONST.CONFIG_RD, 1);
 						Pk2.UploadData();
 						statusReg = Pk2.Usb_read_array[2];
@@ -4507,12 +4384,12 @@ namespace PICkit2V2
 									Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigBlank[0] | orMask;
 						for (int cfg = 1; cfg < configWords; cfg++)
 						{
-							Pk2.DeviceBuffers.ProgramMemory[configLocation + 6 + cfg*2] =
+							Pk2.DeviceBuffers.ProgramMemory[configLocation + 6 + cfg * 2] =
 									Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigBlank[cfg] | orMask;
 						}
 					}
 					else
-                    {
+					{
 						for (int cfg = 0; cfg < configWords; cfg++)
 						{
 							Pk2.DeviceBuffers.ProgramMemory[configLocation + cfg] =
@@ -4553,11 +4430,11 @@ namespace PICkit2V2
 			conditionalVDDOff();
 
 			if (toolStripMenuItemClearBuffersErase.Checked)
-            {
+			{
 				updateGUI(KONST.UpdateMemoryDisplays, KONST.EnableMclrCheckBox, KONST.UpdateProtections);
 			}
 			else
-            {
+			{
 				updateGUI(KONST.UpdateMemoryDisplays, KONST.EnableMclrCheckBox, KONST.DontUpdateProtections);
 			}
 		}
@@ -4632,7 +4509,7 @@ namespace PICkit2V2
 
 			buttonWrite.Text = "Stop";
 			buttonWrite.Enabled = true;
-			
+
 			deviceWrite();
 
 			buttonWrite.Text = "Write";
@@ -4658,7 +4535,7 @@ namespace PICkit2V2
 
 			bool useLowVoltageRowErase = false;
 
-			if (!preProgrammingCheck(Pk2.GetActiveFamily(),false))
+			if (!preProgrammingCheck(Pk2.GetActiveFamily(), false))
 			{
 				return false; // abort
 			}
@@ -4695,7 +4572,7 @@ namespace PICkit2V2
 						return false;
 					}
 					else
-                    {
+					{
 						updateGUI(KONST.UpdateMemoryDisplays, KONST.DontEnableMclrCheckBox, KONST.UpdateProtections);
 					}
 				}
@@ -4936,7 +4813,7 @@ namespace PICkit2V2
 				progressBar1.Value = 0;     // reset bar
 
 				Pk2.RunScript(KONST.PROG_ENTRY, 1);
-				
+
 				if (Pk2.DevFile.PartsList[Pk2.ActivePart].ProgMemWrPrepScript != 0)
 				{ // if prog mem address set script exists for this part
 					Pk2.DownloadAddress3(0);
@@ -4946,7 +4823,7 @@ namespace PICkit2V2
 					// For some newer PIC24 families the first address set doesn't always success(?)
 					// As workaround, set it twice for all 16-bit parts
 					if (Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue == 0xFFFFFF)
-                    {
+					{
 						Pk2.DownloadAddress3(0);
 						Pk2.RunScript(KONST.PROGMEM_WR_PREP, 1);
 					}
@@ -4965,14 +4842,14 @@ namespace PICkit2V2
 
 				// PIC24/dsPIC: handle cases where wordsPerWrite would cause TBLPAG update to not happen at 0x8000
 				if (Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue == 0xFFFFFF)
-                {
+				{
 					while ((0x8000 % wordsPerLoop) != 0)
-                    {
+					{
 						wordsPerLoop--;
-                    }
+					}
 					scriptRunsToUseDownload = wordsPerLoop / wordsPerWrite;
-                }
-				
+				}
+
 				// Find end of used memory
 				endOfBuffer = Pk2.FindLastUsedInBuffer(Pk2.DeviceBuffers.ProgramMemory,
 											Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue, endOfBuffer);
@@ -5058,18 +4935,18 @@ namespace PICkit2V2
 						}
 						// download data
 						if (!wholeChunkIsBlank || Pk2.DevFile.PartsList[Pk2.ActivePart].ProgMemAddrSetScript == 0 || skipBlankSectionsToolStripMenuItem.Checked == false || Pk2.FamilyIsMCP())     // JAKA - Upload data only if it's not completely blank
-							{
+						{
 							if (Pk2.DevFile.PartsList[Pk2.ActivePart].ProgMemAddrSetScript != 0 && skipBlankSectionsToolStripMenuItem.Checked == true && !Pk2.FamilyIsMCP())
 							//if (Pk2.DevFile.PartsList[Pk2.ActivePart].ProgMemAddrSetScript != 0 &&  !Pk2.FamilyIsMCP())
-								// && (Pk2.DevFile.PartsList[Pk2.ActivePart].ProgMemAddrBytes != 0))
-								{ // if prog mem address set script exists for this part
-									if (previousChunkWasBlank)
+							// && (Pk2.DevFile.PartsList[Pk2.ActivePart].ProgMemAddrBytes != 0))
+							{ // if prog mem address set script exists for this part
+								if (previousChunkWasBlank)
 								{   // set PC if previous chunk was not written
 									Pk2.DownloadAddress3((wordsWritten - wordsPerLoop) * Pk2.DevFile.Families[Pk2.GetActiveFamily()].AddressIncrement);
 									if (Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue == 0xFFFFFF)
-										Pk2.RunScript(KONST.PROGMEM_WR_PREP, 1);	// PIC24 (maybe others?) need to use WR_PREP when writing, and ADDRSET when reading 
+										Pk2.RunScript(KONST.PROGMEM_WR_PREP, 1);    // PIC24 (maybe others?) need to use WR_PREP when writing, and ADDRSET when reading 
 									else
-										Pk2.RunScript(KONST.PROGMEM_ADDRSET, 1);	// Many PICs can use ADDRSET also when writing.
+										Pk2.RunScript(KONST.PROGMEM_ADDRSET, 1);    // Many PICs can use ADDRSET also when writing.
 								}
 							}
 
@@ -5088,11 +4965,11 @@ namespace PICkit2V2
 
 						//if (Pk2.DevFile.Families[Pk2.GetActiveFamily()].FamilyName != "PIC18/PIC18F MSB1st")    // JAKA - do not re-write write prep script for PIC18F with large memory - it fails.
 						//{                                                                                       // It is actually 'set address to 0' -script for 18F Q series PICs
-							if (((wordsWritten % 0x8000) == 0) && (Pk2.DevFile.PartsList[Pk2.ActivePart].ProgMemWrPrepScript != 0))
-							{ //PIC24 must update TBLPAG
-								Pk2.DownloadAddress3(0x10000 * (wordsWritten / 0x8000));
-								Pk2.RunScript(KONST.PROGMEM_WR_PREP, 1);
-							}
+						if (((wordsWritten % 0x8000) == 0) && (Pk2.DevFile.PartsList[Pk2.ActivePart].ProgMemWrPrepScript != 0))
+						{ //PIC24 must update TBLPAG
+							Pk2.DownloadAddress3(0x10000 * (wordsWritten / 0x8000));
+							Pk2.RunScript(KONST.PROGMEM_WR_PREP, 1);
+						}
 						//}
 
 						previousChunkWasBlank = wholeChunkIsBlank;
@@ -5111,7 +4988,7 @@ namespace PICkit2V2
 				{
 					Pk2.DeviceBuffers.ProgramMemory[configLocation]
 							= configBackups[0];
-					
+
 					for (int cfg = 1; cfg < configWords; cfg++)
 					{
 						Pk2.DeviceBuffers.ProgramMemory[configLocation + 6 + cfg * 2]
@@ -5229,14 +5106,14 @@ namespace PICkit2V2
 
 			// Write UserIDs
 			bool OTPAlreadyWritten = false;
-        	if (checkBoxProgMemEnabled.Checked && (Pk2.DevFile.PartsList[Pk2.ActivePart].UserIDWords > 0) && !stopOperation)
+			if (checkBoxProgMemEnabled.Checked && (Pk2.DevFile.PartsList[Pk2.ActivePart].UserIDWords > 0) && !stopOperation)
 			{ // do not write if EE unselected as PIC18F cannot erase/write UserIDs except with ChipErase
 				if (Pk2.PartHasCustomerOTP())
-                {
+				{
 					displayStatusWindow.Text += "Customer OTP... ";
 				}
 				else
-                {
+				{
 					displayStatusWindow.Text += "UserIDs... ";
 				}
 				this.Update();
@@ -5254,10 +5131,10 @@ namespace PICkit2V2
 					uIDcheckmask = 0xffff;
 				else
 					uIDcheckmask = 0xffffff;
-				
+
 				// Check if the device has OTP already programmed..
 				if (Pk2.PartHasCustomerOTP())
-                {
+				{
 					//displayStatusWindow.Text += "UserIDs... ";
 					//this.Update();
 					byte[] upload_buffer = new byte[KONST.UploadBufferSize];
@@ -5336,7 +5213,7 @@ namespace PICkit2V2
 						}
 					} while (wordsRead < Pk2.DevFile.PartsList[Pk2.ActivePart].UserIDWords && OTPAlreadyWritten == false && !stopOperation);
 					Pk2.RunScript(KONST.PROG_EXIT, 1);
-			
+
 				}
 
 				for (int word = 0; word < Pk2.DevFile.PartsList[Pk2.ActivePart].UserIDWords; word++)
@@ -5386,7 +5263,7 @@ namespace PICkit2V2
 						}
 					}
 					int reducedDownloadIndex = maxDownloadIndex;
-                    
+
 					Pk2.RunScript(KONST.PROG_ENTRY, 1);
 
 					if (Pk2.PartHasCustomerOTP())
@@ -5412,7 +5289,7 @@ namespace PICkit2V2
 
 					int dataIndex = 0;
 					int bytesWrittenBeforeThisRound = 0;
-					
+
 					while (dataIndex < downloadIndex)
 					{
 						bytesWrittenBeforeThisRound = dataIndex;
@@ -5423,7 +5300,7 @@ namespace PICkit2V2
 						}
 						//Pk2.RunScript(KONST.USERID_WR, (dataIndex + 63) / 64);
 						if (Pk2.PartHasCustomerOTP())
-							Pk2.RunScript(KONST.USERID_WR, ((dataIndex-bytesWrittenBeforeThisRound) / wordsPerWrite) / bytesPerID);
+							Pk2.RunScript(KONST.USERID_WR, ((dataIndex - bytesWrittenBeforeThisRound) / wordsPerWrite) / bytesPerID);
 						else
 							Pk2.RunScript(KONST.USERID_WR, (dataIndex + 63) / 64);
 						reducedDownloadIndex += maxDownloadIndex;
@@ -5465,10 +5342,10 @@ namespace PICkit2V2
 				{ // normal
 					if (verifyStop > configLocation)
 						verifyStop = configLocation;
-						//verifyStop = verifyStop - configWords;	  // do we really need to subtract configWords?
-															  // verifyStop is already at end of written data
-															  // Yes, we need! If there has been other data just before
-															  // the configWords, we have written up to last progmem word
+					//verifyStop = verifyStop - configWords;	  // do we really need to subtract configWords?
+					// verifyStop is already at end of written data
+					// Yes, we need! If there has been other data just before
+					// the configWords, we have written up to last progmem word
 				}
 			}
 
@@ -5497,7 +5374,7 @@ namespace PICkit2V2
 						Pk2.DeviceBuffers.OSCCAL;
 			}
 
-			
+
 			// WRITE CONFIGURATION
 			if (verifySuccess && !stopOperation)
 			{ // if we've failed verification, don't try to finish write
@@ -5517,7 +5394,7 @@ namespace PICkit2V2
 					// To get around this, we're using a bit of hack.  Detect PIC18F or PIC18F_K_parts,
 					// and look for WRTC = 0.  If found, write config words once with CONFIG6 = 0xFFFF
 					// then re-write it with the correct value.
-					
+
 					if ((Pk2.DevFile.Families[Pk2.GetActiveFamily()].FamilyName == "PIC18F") ||
 						(Pk2.DevFile.Families[Pk2.GetActiveFamily()].FamilyName == "PIC18F_K_"))
 					{
@@ -5533,17 +5410,17 @@ namespace PICkit2V2
 
 						}
 					}
-					
+
 					checksumPk2Go += Pk2.WriteConfigOutsideProgMem((enableCodeProtectToolStripMenuItem.Enabled && enableCodeProtectToolStripMenuItem.Checked),
 												  (enableDataProtectStripMenuItem.Enabled && enableDataProtectStripMenuItem.Checked));
-					
+
 					//Adjust for some PIC18F masked config bits that remain set.
 					// if (Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue == 0xFFFF)
-					if	(Pk2.DevFile.Families[Pk2.GetActiveFamily()].FamilyName == "PIC18F")	// JAKA: Use this only for the 'original' 18F family. Other 18F devices can contain over 7 config words and this will fail.
+					if (Pk2.DevFile.Families[Pk2.GetActiveFamily()].FamilyName == "PIC18F") // JAKA: Use this only for the 'original' 18F family. Other 18F devices can contain over 7 config words and this will fail.
 					{
 						checksumPk2Go += Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[7];
 					}
-					
+
 					// Verify Configuration
 					if (verifyOnWriteToolStripMenuItem.Checked)
 					{
@@ -5567,12 +5444,12 @@ namespace PICkit2V2
 						}
 					}
 					else
-                    {	// Verify after write flag NOT checked.
+					{   // Verify after write flag NOT checked.
 						if (Pk2.LearnMode)
-                        {
-							Pk2.MetaCmd_START_CHECKSUM();	// Clear PTG checksum registers from PK2
-                        }
-                    }
+						{
+							Pk2.MetaCmd_START_CHECKSUM();   // Clear PTG checksum registers from PK2
+						}
+					}
 				}
 				else if ((configWords > 0) && checkBoxProgMemEnabled.Checked)
 				{  // for parts where config resides in program memory.
@@ -5607,7 +5484,7 @@ namespace PICkit2V2
 						statusWindowColor = Constants.StatusColor.green;
 						displayStatusWindow.Text = "Programming Successful.\n";
 						if (OTPAlreadyWritten)
-                        {
+						{
 							displayStatusWindow.Text += "Skipped Customer OTP as already programmed.";
 						}
 					}
@@ -6164,11 +6041,11 @@ namespace PICkit2V2
 				!stopOperation)
 			{
 				if (Pk2.PartHasCustomerOTP())
-                {
+				{
 					displayStatusWindow.Text += "Customer OTP... ";
 				}
 				else
-                {
+				{
 					displayStatusWindow.Text += "UserIDs... ";
 				}
 				this.Update();
@@ -6244,12 +6121,12 @@ namespace PICkit2V2
 					{
 						conditionalVDDOff();
 						if (Pk2.PartHasCustomerOTP())
-                        {
+						{
 							displayStatusWindow.Text = "Customer OTP memory is not blank.";
 							statusWindowColor = Constants.StatusColor.yellow;
 						}
 						else
-                        {
+						{
 							displayStatusWindow.Text = "User IDs are not blank.";
 							statusWindowColor = Constants.StatusColor.red;
 						}
@@ -6293,19 +6170,19 @@ namespace PICkit2V2
 						config = (config >> 1) & Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue;
 					}
 					int configBlank = 0xffff;
-					if (word<9)
-                    {
+					if (word < 9)
+					{
 						config &= Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[word];
 						configBlank = Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[word]
 										   & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigBlank[word];
 					}
 					else if (Pk2.DevFile.Families[Pk2.GetActiveFamily()].ProgMemShift > 0)
-                    {
+					{
 						configBlank = 0x3fff;
 					}
-					
-					if ((word == 0) && (Pk2.DevFile.PartsList[Pk2.ActivePart].BandGapMask>0))
-                    {
+
+					if ((word == 0) && (Pk2.DevFile.PartsList[Pk2.ActivePart].BandGapMask > 0))
+					{
 						// Ignore Bandgap bits for devices which have those
 						config &= ~(Pk2.DevFile.PartsList[Pk2.ActivePart].BandGapMask);
 						configBlank &= ~(int)(Pk2.DevFile.PartsList[Pk2.ActivePart].BandGapMask);
@@ -6429,15 +6306,15 @@ namespace PICkit2V2
 
 		private void checkCommunication(object sender, EventArgs e)
 		{
-			semiDisableGUIControls();	// Disable buttons / controls while searching PICkit and devices
+			semiDisableGUIControls();   // Disable buttons / controls while searching PICkit and devices
 			if (!detectPICkit2(KONST.ShowMessage, true, true))
 			{
 				return;
 
 			}
-			setMenuVisibilities();	// 12.12.2021 Set menu visibilities based on connected PICkit type
-			//partialEnableGUIControls();
-			
+			setMenuVisibilities();  // 12.12.2021 Set menu visibilities based on connected PICkit type
+									//partialEnableGUIControls();
+
 			lookForPoweredTarget(KONST.NoMessage);
 
 			if (!Pk2.DevFile.Families[Pk2.GetActiveFamily()].PartDetect)
@@ -6446,15 +6323,15 @@ namespace PICkit2V2
 				setGUIVoltageLimits(true);
 				Pk2.SetVDDVoltage((float)numUpDnVDD.Value, 0.85F, false);
 				if (Pk2.DevFile.Families[Pk2.GetActiveFamily()].DeviceIDMask == 0)
-                {
+				{
 					displayStatusWindow.Text = displayStatusWindow.Text + "\n[Parts in this family are not auto-detect.]";
 				}
 				else if (toolStripMenuItemManualSelect.Checked)
-                {
+				{
 					displayStatusWindow.Text = displayStatusWindow.Text + "\n[Manual Device Select active.]";
 				}
 				if (comboBoxSelectPart.SelectedIndex == 0)
-					semiDisableGUIControls();	// Disable read/write buttons if no part selected and manual mode
+					semiDisableGUIControls();   // Disable read/write buttons if no part selected and manual mode
 				else
 					fullEnableGUIControls();
 			}
@@ -6478,7 +6355,7 @@ namespace PICkit2V2
 			checkForPowerErrors();
 
 			updateGUI(KONST.UpdateMemoryDisplays, KONST.EnableMclrCheckBox, KONST.UpdateProtections);
-			DisableProcessWindowsGhosting();	// JAKA - added 22.9.2021. Fixes freezes if program started without PICkit connected.
+			DisableProcessWindowsGhosting();    // JAKA - added 22.9.2021. Fixes freezes if program started without PICkit connected.
 		}
 
 		/**********************************************************************************************************
@@ -6533,7 +6410,7 @@ namespace PICkit2V2
 		{
 			if (!writeVerify)
 			{ // only check if "stand-alone" verify            
-				if (!preProgrammingCheck(Pk2.GetActiveFamily(),false))
+				if (!preProgrammingCheck(Pk2.GetActiveFamily(), false))
 				{
 					return false; // abort
 				}
@@ -6560,7 +6437,7 @@ namespace PICkit2V2
 			displayStatusWindow.Text = "Verifying Device:\n";
 			//displayStatusWindow.Update();
 			this.Update();
-			updateGUI(KONST.DontUpdateMemDisplays, KONST.DontEnableMclrCheckBox, KONST.DontUpdateProtections);	// added 20.1.2025 to clear previous status window color
+			updateGUI(KONST.DontUpdateMemDisplays, KONST.DontEnableMclrCheckBox, KONST.DontUpdateProtections);  // added 20.1.2025 to clear previous status window color
 
 			if (!Pk2.FamilyIsKeeloq() && (!writeVerify || !Pk2.FamilyIsPIC24FJ()))
 			{
@@ -6591,7 +6468,7 @@ namespace PICkit2V2
 						displayStatusWindow.Text += "EEPROM... ";
 				}
 				else
-                {
+				{
 					displayStatusWindow.Text += "Program Memory... ";
 				}
 				//displayStatusWindow.Update();
@@ -6659,7 +6536,7 @@ namespace PICkit2V2
 
 					bool wholeChunkIsBlank = true;
 					bool previousChunkWasBlank = false;
-					
+
 					if (Pk2.DevFile.PartsList[Pk2.ActivePart].ProgMemRdWords == (endOfBuffer + 1))
 					{ // very small memory sizes (like HCS parts)
 						scriptRunsToFillUpload = 1;
@@ -6868,7 +6745,7 @@ namespace PICkit2V2
 			if (((checkBoxEEMem.Checked) || forceEEVerify) && (Pk2.DevFile.PartsList[Pk2.ActivePart].EEMem > 0) && !stopOperation)
 			{
 				if (Pk2.LearnMode && (Pk2.DevFile.Families[Pk2.GetActiveFamily()].ProgMemShift > 0)
-					&& Pk2.DevFile.Families[Pk2.GetActiveFamily()].FamilyName != "Midrange/1.8V Min MSB1st")	// JAKA: Do not clear 'unnecessary' bits on EEPROM data as they contain valid data bc bit order is swapped!
+					&& Pk2.DevFile.Families[Pk2.GetActiveFamily()].FamilyName != "Midrange/1.8V Min MSB1st")    // JAKA: Do not clear 'unnecessary' bits on EEPROM data as they contain valid data bc bit order is swapped!
 				{
 					Pk2.MetaCmd_CHANGE_CHKSM_FRMT(2);
 				}
@@ -7058,8 +6935,8 @@ namespace PICkit2V2
 					}
 					if ((memWord != bufferWord) && !Pk2.LearnMode)
 					//if ((memWord != Pk2.DeviceBuffers.UserIDs[wordsRead++]) && !Pk2.LearnMode)
-						{
-							conditionalVDDOff();
+					{
+						conditionalVDDOff();
 						if (!writeVerify)
 						{
 							if (Pk2.PartHasCustomerOTP())
@@ -7116,7 +6993,7 @@ namespace PICkit2V2
 				conditionalVDDOff();
 			}
 			else if (stopOperation)
-            {
+			{
 				displayStatusWindow.Text = "Programming aborted!\nDevice contents in undefined state!";
 				statusWindowColor = Constants.StatusColor.yellow;
 			}
@@ -7163,20 +7040,20 @@ namespace PICkit2V2
 					}
 
 					uint configExpected;
-					if (word<9)
-                    {
+					if (word < 9)
+					{
 						config &= Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[word];
-						configExpected = 
+						configExpected =
 							Pk2.DeviceBuffers.ConfigWords[word] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[word];
 					}
-					else if ((word == (configWords-1)) && ((Pk2.DevFile.PartsList[Pk2.ActivePart].ProgMemPanelBufs & 0x04) == 0x04))
-                    {
+					else if ((word == (configWords - 1)) && ((Pk2.DevFile.PartsList[Pk2.ActivePart].ProgMemPanelBufs & 0x04) == 0x04))
+					{
 						config &= 0x00ff;
-						configExpected = Pk2.DeviceBuffers.ConfigWords[word] & 0x00ff;		// Mask out the 'missing' byte of last partial config word on Q71,83,84
+						configExpected = Pk2.DeviceBuffers.ConfigWords[word] & 0x00ff;      // Mask out the 'missing' byte of last partial config word on Q71,83,84
 					}
 					else
 					{
-						configExpected = Pk2.DeviceBuffers.ConfigWords[word];		// Mask is 0xffff for words > 9
+						configExpected = Pk2.DeviceBuffers.ConfigWords[word];       // Mask is 0xffff for words > 9
 					}
 
 					/*
@@ -7234,7 +7111,7 @@ namespace PICkit2V2
 		private void downloadNewFirmware()
 		{
 			DisableProcessWindowsGhosting();        // 9.4.2022, v3.20.12 JAKA. Prevents lockup when starting in bootloader mode
-			// download new firmware
+													// download new firmware
 			progressBar1.Value = 0;     // reset bar
 			progressBar1.Maximum = 2;
 			displayStatusWindow.Text = "Downloading New " + Pk2.ToolName + " Operating System.";
@@ -7428,7 +7305,7 @@ namespace PICkit2V2
 				showDownloadError("Downloading Operating System failed. Check USB \nconnections and use Tools->Check Communication.");
 				return;
 			}
-			setMenuVisibilities();		// Set menu item visibilities based on connected PICkit type
+			setMenuVisibilities();      // Set menu item visibilities based on connected PICkit type
 			progressBar1.Value = 0;     // reset bar
 
 			Pk2.VddOff();
@@ -7623,9 +7500,9 @@ namespace PICkit2V2
 
 				//if (buttonWrite.Text == "Write")
 				//{
-					Thread t = new System.Threading.Thread(deviceWriteButtonCaller);
-					programmerOperationInProgress = true;
-					t.Start();
+				Thread t = new System.Threading.Thread(deviceWriteButtonCaller);
+				programmerOperationInProgress = true;
+				t.Start();
 				//}
 				//else
 				//{
@@ -7780,7 +7657,7 @@ namespace PICkit2V2
 			{ // searchable families
 				Pk2.SetActiveFamily(family);
 				//setGUIVoltageLimits(false);
-				if (preProgrammingCheck(family,true))
+				if (preProgrammingCheck(family, true))
 				{
 					displayStatusWindow.Text = Pk2.DevFile.Families[family].FamilyName + " device found.";
 					setGUIVoltageLimits(false);
@@ -7849,8 +7726,8 @@ namespace PICkit2V2
 			displayDataSource.Text = "None (Empty/Erased)";
 			// if (useLVP)
 			if (toolStripMenuItemLVPEnabled.Checked)
-				{ // Enable LVP on first device selected if supported
-					if (Pk2.DevFile.PartsList[Pk2.ActivePart].LVPScript > 0)
+			{ // Enable LVP on first device selected if supported
+				if (Pk2.DevFile.PartsList[Pk2.ActivePart].LVPScript > 0)
 					// toolStripMenuItemLVPEnabled.Checked = true;
 					displayStatusWindow.Text = "Using Low voltage program entry.";
 				else
@@ -7890,7 +7767,7 @@ namespace PICkit2V2
 					downloadNewFirmwarePK3();
 				}
 				else
-                {
+				{
 					openFWFile.FileName = KONST.FWFileNamePkob;
 					downloadNewFirmwarePK3();
 				}
@@ -7906,14 +7783,36 @@ namespace PICkit2V2
 
 		private void SaveINI()
 		{
-			//StreamWriter hexFile = new StreamWriter("PICkit2.ini");
+			string strPath;
+			HomeDirectory = System.IO.Path.GetDirectoryName(Application.ExecutablePath);
+
+			// Check whether the directory where this software was launched contains file called 'InstallDir.txt'
+			// If it has, the .ini file will be saved to AppData/Local directory. Otherwise, the .ini file will
+			// be saved to same directory as software. This allows 'portable' version, and prevent .ini file write
+			// permission error.
+			string testInstallDir = HomeDirectory + "\\InstallDir.txt";
+			if (File.Exists(testInstallDir))
+			{
+				strPath = System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData);
+			}
+			else
+			{
+				strPath = HomeDirectory;
+			}
+
+
 			StreamWriter hexFile;
 
-			string strPath = System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData);
-			hexFile = File.CreateText(strPath + "\\PICkitminus.ini");
+			try
+			{
+				hexFile = File.CreateText(strPath + "\\PICkitminus.ini");
+			}
+			catch       // e.g. no write permission. Maybe program started from CD-ROM?
+			{
+				return;
+			}
 
 			// Comments
-			// string value = ";" + Pk2.ToolName + " version " + Constants.AppVersion + " INI file.";
 			string value = ";PICkitminus version " + Constants.AppVersion + " INI file.";
 			hexFile.WriteLine(value);
 			DateTime now = new DateTime();
@@ -8091,8 +7990,8 @@ namespace PICkit2V2
 			value = "N";
 			if (toolStripMenuItemLVPEnabled.Checked)
 			// if (useLVP)
-				{
-					value = "Y";
+			{
+				value = "Y";
 			}
 			hexFile.WriteLine("LVPE: " + value);
 
@@ -8350,12 +8249,30 @@ namespace PICkit2V2
 
 			hexFile.Flush();
 			hexFile.Close();
+			
 		}
 
 		private float loadINI()
 		{
 			float returnSETV = 0;
 			int tempval = 0;
+			string strPath;
+
+			HomeDirectory = System.IO.Path.GetDirectoryName(Application.ExecutablePath);
+
+			// Check whether the directory where this software was launched contains file called 'InstallDir.txt'
+			// If it has, the .ini file will be loaded from AppData/Local directory. Otherwise, the .ini file will
+			// be loaded from same directory as software. This allows 'portable' version, and prevent .ini file write
+			// permission error.
+			string testInstallDir = HomeDirectory + "\\InstallDir.txt";
+			if (File.Exists(testInstallDir))
+            {
+				 strPath = System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData);
+			}
+			else
+            {
+				strPath = HomeDirectory;
+            }
 
 			try
 			{
@@ -8363,22 +8280,10 @@ namespace PICkit2V2
 				int desktopHeigth = SystemInformation.VirtualScreen.Height;
 				int desktopWidth = SystemInformation.VirtualScreen.Width;
 
-
 				FileInfo hexFile;
 
-				/*
-				if (!Pk2.isPK3)
-					hexFile = new FileInfo("PICkit2.ini");
-				else
-					hexFile = new FileInfo("PICkit3.ini");
-				*/
-
-				string strPath = System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData);
 				hexFile = new FileInfo(strPath + "\\PICkitminus.ini");
 
-				// HomeDirectory = hexFile.DirectoryName;
-				// HomeDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-				HomeDirectory = System.IO.Path.GetDirectoryName(Application.ExecutablePath);
 				// init default sounds locations
 				SuccessWavFile = HomeDirectory + SuccessWavFile;
 				WarningWavFile = HomeDirectory + WarningWavFile;

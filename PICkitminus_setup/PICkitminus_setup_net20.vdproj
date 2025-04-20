@@ -15,6 +15,12 @@
     {
         "Entry"
         {
+        "MsmKey" = "8:_12380496EBE94458A1B4DF51B69A4C02"
+        "OwnerKey" = "8:_UNDEFINED"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
         "MsmKey" = "8:_19C6545BC4054270AF7751DF58E9DF8B"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
@@ -217,6 +223,26 @@
         }
         "File"
         {
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_12380496EBE94458A1B4DF51B69A4C02"
+            {
+            "SourcePath" = "8:..\\PICkit2V2\\bin\\Release\\InstallDir.txt"
+            "TargetName" = "8:InstallDir.txt"
+            "Tag" = "8:"
+            "Folder" = "8:_732EC017B72740F9A6D4A79C884CFCE7"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:FALSE"
+            "IsolateTo" = "8:"
+            }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_1EEA2ACCC9774E81810F2372E6E5AB06"
             {
             "SourcePath" = "8:..\\PICkit2V2\\bin\\Release\\Logic Tool User Guide.pdf"
@@ -625,7 +651,7 @@
         "Name" = "8:Microsoft Visual Studio"
         "ProductName" = "8:PICkitminus"
         "ProductCode" = "8:{42E31D5C-3537-42B2-941B-C90DA10629D0}"
-        "PackageCode" = "8:{50AEB5C8-680D-4FBA-9CAD-CF8EFD65AC00}"
+        "PackageCode" = "8:{D72A71D4-4C89-4298-B209-A013AD3295DA}"
         "UpgradeCode" = "8:{6A727D5A-945C-4CC9-8FB7-8CAABEBDE1B8}"
         "AspNetVersion" = "8:2.0.50727.0"
         "RestartWWWService" = "11:FALSE"
