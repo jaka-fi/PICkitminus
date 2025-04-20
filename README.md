@@ -7,24 +7,24 @@ You can use your trusty old PICkit2 and PICkit3 with the new Microchip PIC micro
 
 Features
 --------
-- Supports nearly all, if not all, 8-bit PIC microcontrollers which use ICSP
-- Supports PICkit2 and PICkit3 programmers, including clones and derivatives like PKOB, PICkit3.5 or PK2M
+- Supports 1540 devices, inclding nearly all, if not all, 8-bit PIC microcontrollers which use ICSP
+- Supports PICkit2 and PICkit3 programmers, including clones and derivatives like PKOB, PICkit3.5 or [PK2M](http://kair.us/projects/pk2m_programmer/index.html)
 - Improved auto detection of parts
 - Programmer-to-go support with PICkit2 and PICkit3
 - Programmer-to-go works with MSB1st families
 - Optimized programming scripts for MSB1st families to reduce write and verify times
 - Improved blank section skipping for write and verify, to further reduce programming times
-- Improved operation with PICkit3 clones
-- UART tool also for PICkit3
-- UART possible to use also with other software by creating a virtual COM port
-- SPI FLASH device support
+- [Improved operation](https://forum.microchip.com/s/topic/a5C3l000000MdWiEAK/t381995) with PICkit3 clones
+- [UART tool also for PICkit3](https://protoncompiler.com/index.php/topic,1616.0.html)
+- UART possible to use also with other software [by creating a virtual COM port](http://kair.us/projects/pickitminus/pickit2_and_pickit3_as_virtual_com_port.html)
+- [SPI FLASH device support](http://kair.us/projects/pickitminus/program_spi_flash_devices_with_pickit2_and_pickit3.html)
 - GUI software works on Windows 2000, XP, 7, 10, 11
 - Command line software works on Windows XP, 7, 10, 11, Linux and MacOS
 - Retains all the good features from original Microchip PICkit2 and PICkit3 stand-alone software
 
 Notes on PICkit3 and PKOB
 -------------------------
-The PICkit3 and PKOB (PICKit On Board) require a special 'scripting' firmware, just like the Microchip original PICkit3 standalone GUI software. It is easiest to use the PICkitminus GUI software to update this firmware. When you start the software, it guides you to update the firmware if needed. The pk2cmd doesn't yet support firmware updates for PICkit3 or PKOB.
+The PICkit3 and PKOB (PICKit On Board) require a special 'scripting' firmware, just like the Microchip original PICkit3 standalone GUI software. When you start the GUI software, it guides you to update the firmware if needed. The pk2cmd doesn't yet support firmware updates for PICkit3 or PKOB.
 
 When you want to use MPLAB, MPLAB-X or MPLAB-X IPE again, you must revert the PICkit3 to bootloader. To do this, select 'Revert to MPLAB mode' from Tools menu. Then start MPLAB(-X), and it will update the correct firmware for MPLAB usage. If you don't do this, you will get all kind of errors when trying to use your PICkit3 or PKOB with MPLAB.
 
