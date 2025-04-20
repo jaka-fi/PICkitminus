@@ -1559,7 +1559,6 @@ namespace PICkit2V2
 				displayStatusWindow.BackColor = Color.Salmon;
 				displayStatusWindow.Text =
 					"No PICkit devices found.  Check USB connections\nand use Tools -> Check Communication to retry.";
-				//				Pk2.ToolName + " not found.  Check USB connections and \nuse Tools->Check Communication to retry.";
 				return false;
 			}
 		}
@@ -1607,13 +1606,8 @@ namespace PICkit2V2
 			UARTtoolStripMenuItem.Enabled = false;
 			toolStripMenuItemLogicTool.Enabled = false;
 
-			//if (Pk2.isPK3)
-			//{
 			downloadPICkit2FirmwareToolStripMenuItem.Enabled = false;
 			revertToMPLABModeToolStripMenuItem.Enabled = false;
-			//}
-
-
 		}
 
 
@@ -1654,13 +1648,8 @@ namespace PICkit2V2
 			UARTtoolStripMenuItem.Enabled = true;
 			toolStripMenuItemLogicTool.Enabled = true;
 
-			//if (Pk2.isPK3)
-			//{
 			downloadPICkit2FirmwareToolStripMenuItem.Enabled = true;
 			revertToMPLABModeToolStripMenuItem.Enabled = true;
-			//}
-
-
 		}
 
 
@@ -1701,19 +1690,12 @@ namespace PICkit2V2
 			eepromDataMultiWin.DisplayDisable();
 			toolStripMenuItemLogicTool.Enabled = true;
 			UARTtoolStripMenuItem.Enabled = true;
-			//if (Pk2.isPK3)
-			//{
 			downloadPICkit2FirmwareToolStripMenuItem.Enabled = true;
 			revertToMPLABModeToolStripMenuItem.Enabled = true;
-			//}
-
-
-			// currently not supported in the PICkit 3 GUI
 
 			if (!Pk2.isPKOB)
 			{
 				pICkit2GoToolStripMenuItem.Enabled = true;
-				//UARTtoolStripMenuItem.Enabled = true;
 			}
 
 		}
@@ -1755,18 +1737,12 @@ namespace PICkit2V2
 			toolStripMenuItemLogicTool.Enabled = true;
 			UARTtoolStripMenuItem.Enabled = true;
 
-			//if (Pk2.isPK3)
-			//{
 			downloadPICkit2FirmwareToolStripMenuItem.Enabled = true;
 			revertToMPLABModeToolStripMenuItem.Enabled = true;
-			//}
-
-			// currently not supported in the PICkit 3 GUI
 
 			if (!Pk2.isPKOB)
 			{
 				pICkit2GoToolStripMenuItem.Enabled = true;
-				// UARTtoolStripMenuItem.Enabled = true;
 			}
 
 		}
@@ -1808,19 +1784,12 @@ namespace PICkit2V2
 			toolStripMenuItemLogicTool.Enabled = true;
 			UARTtoolStripMenuItem.Enabled = true;
 
-			//if (Pk2.isPK3)
-			//{
 			downloadPICkit2FirmwareToolStripMenuItem.Enabled = true;
 			revertToMPLABModeToolStripMenuItem.Enabled = true;
-			//}
-
-
-			// currently not supported in the PICkit 3 GUI
 
 			if (!Pk2.isPKOB)
 			{
 				pICkit2GoToolStripMenuItem.Enabled = true;
-				// UARTtoolStripMenuItem.Enabled = true;
 			}
 
 		}
