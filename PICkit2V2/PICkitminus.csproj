@@ -332,6 +332,7 @@
     <Content Include="Icon3.ico" />
     <Content Include="Icon_logic.ico" />
     <Content Include="Icon_uart.ico" />
+    <Content Include="license.txt" />
     <Content Include="TextTemplate.ico" />
   </ItemGroup>
   <ItemGroup>

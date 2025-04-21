@@ -2700,28 +2700,6 @@ namespace PICkit2V2
 			return 0xFFFF;
 		}
 
-/*		public static bool writeUSB(byte[] commandList)
-		{
-			int bytesWritten = 0;
-
-			//USB_BYTE_COUNT += commandList.Length;
-			//USB_BYTE_COUNT++;
-
-			Usb_write_array[0] = 0;                         // first byte must always be zero.        
-			for (int index = 1; index < Usb_write_array.Length; index++)
-			{
-				Usb_write_array[index] = KONST.END_OF_BUFFER;              // init array to all END_OF_BUFFER cmds.
-			}
-			Array.Copy(commandList, 0, Usb_write_array, 1, commandList.Length);
-			bool writeResult = USB.WriteFile(usbWriteHandle, Usb_write_array, Usb_write_array.Length, ref bytesWritten, 0);
-
-			if (bytesWritten != Usb_write_array.Length)
-			{
-				return false;
-			}
-			return writeResult;
-		}*/
-
 		public static bool writeUSB(byte[] commandList)
 		{
 			if (wrhEventObject == IntPtr.Zero)
@@ -2741,16 +2719,6 @@ namespace PICkit2V2
 			bool retVal = false;
 
 			int bytesWritten = 0;
-			//int l_overlapped = 0;
-			/*K32.OVERLAPPED l_overlapped;
-			l_overlapped.hEvent = 0;
-			l_overlapped.Internal = 0;
-			l_overlapped.InternalHigh = 0;
-			l_overlapped.Offset = 0;
-			l_overlapped.OffsetHigh = 0;*/
-
-			//USB_BYTE_COUNT += commandList.Length;
-			//USB_BYTE_COUNT++;
 
 			Usb_write_array[0] = 0;                         // first byte must always be zero.        
 			for (int index = 1; index < Usb_write_array.Length; index++)
@@ -2758,7 +2726,6 @@ namespace PICkit2V2
 				Usb_write_array[index] = KONST.END_OF_BUFFER;              // init array to all END_OF_BUFFER cmds.
 			}
 			Array.Copy(commandList, 0, Usb_write_array, 1, commandList.Length);
-			//bool writeResult = USB.WriteFile(usbWriteHandle, Usb_write_array, Usb_write_array.Length, ref bytesWritten, ref HIDWrOverlapped);
 			Result = USB.WriteFile(usbWriteHandle, Usb_write_array, Usb_write_array.Length, ref bytesWritten, ref HIDWrOverlapped);
 
 			Result = USB.WaitForSingleObject(wrhEventObject, 1000);
@@ -2784,9 +2751,6 @@ namespace PICkit2V2
 						//A timeout may mean that the device has been removed.
 						//Close the device handles and set DeviceDetected = False
 						//so the next access attempt will search for the device.
-						//CloseHandle(ReadHandle);
-						//CloseHandle(DeviceHandle);
-						//DeviceDetected = FALSE;
 						break;
 					}
 				default:
@@ -2796,12 +2760,6 @@ namespace PICkit2V2
 			}
 			
 			USB.ResetEvent(wrhEventObject);
-			/*
-			if (bytesWritten != Usb_write_array.Length)
-			{
-				return false;
-			}*/
-			//return writeResult;
 			return retVal;
 		}
 
@@ -2827,16 +2785,6 @@ namespace PICkit2V2
 				HIDWrOverlapped.OffsetHigh = 0;
 			}
 
-
-			//int l_overlapped = 0;
-			/*K32.OVERLAPPED l_overlapped;
-			l_overlapped.hEvent = 0;
-			l_overlapped.Internal = 0;
-			l_overlapped.InternalHigh = 0;
-			l_overlapped.Offset = 0;
-			l_overlapped.OffsetHigh = 0;*/
-
-
 			Usb_write_array[0] = 0;                         // first byte must always be zero.        
 			for (int index = 1; index < Usb_write_array.Length; index++)
 			{
@@ -2850,7 +2798,6 @@ namespace PICkit2V2
 			Usb_write_array[63] = (byte)((commandLength >> 16) & 0xFF);
 			Usb_write_array[64] = (byte)((commandLength >> 24) & 0xFF);
 
-			//bool writeResult = USB.WriteFile(usbWriteHandle, Usb_write_array, Usb_write_array.Length, ref bytesWritten, 0);
 			Result = USB.WriteFile(usbWriteHandle, Usb_write_array, Usb_write_array.Length, ref bytesWritten, ref HIDWrOverlapped);
 
 			Result = USB.WaitForSingleObject(wrhEventObject, 1000);
@@ -2873,12 +2820,6 @@ namespace PICkit2V2
 
 						Result = USB.CancelIo(usbWriteHandle);
 						retVal = false;
-						//A timeout may mean that the device has been removed.
-						//Close the device handles and set DeviceDetected = False
-						//so the next access attempt will search for the device.
-						//CloseHandle(ReadHandle);
-						//CloseHandle(DeviceHandle);
-						//DeviceDetected = FALSE;
 						break;
 					}
 				default:
@@ -2888,72 +2829,9 @@ namespace PICkit2V2
 			}
 
 			USB.ResetEvent(wrhEventObject);
-			/*
-			if (bytesWritten != Usb_write_array.Length)
-			{
-				return false;
-			}*/
 			return retVal;
-
 		}
 
-
-		static void tryWriteUSB()
-		{
-
-			try
-			{
-				// your call here...
-				// obj.PerformInitTransaction();
-				byte[] testArray = new byte[1];
-				testArray[0] = KONST.FIRMWARE_VERSION;
-				//bool testResult = tryWriteUSB2(testArray);
-				bool testResult = writeUSB(testArray);
-				bool testResult2 = readUSB();
-			}
-			catch (ThreadAbortException)
-			{
-				// cleanup code, if needed...
-			}
-		}
-		/*
-		public static bool tryWriteUSB2(byte[] commandList)
-		{
-			int bytesWritten = 0;
-
-			Usb_write_array[0] = 0;                         // first byte must always be zero.        
-			for (int index = 1; index < Usb_write_array.Length; index++)
-			{
-				Usb_write_array[index] = KONST.END_OF_BUFFER;              // init array to all END_OF_BUFFER cmds.
-			}
-			Array.Copy(commandList, 0, Usb_write_array, 1, commandList.Length);
-			
-			try
-			{
-				bool writeResult = USB.WriteFile(usbWriteHandle, Usb_write_array, Usb_write_array.Length, ref bytesWritten, 1);
-			}
-			catch (ThreadAbortException)
-			{
-				return false;
-			}
-			return true;
-		}
-		*/
-/*		public static bool readUSB()
-		{
-			int bytesRead = 0;
-
-			if (LearnMode)
-				return true;
-
-			bool readResult = USB.ReadFile(usbReadHandle, Usb_read_array, Usb_read_array.Length, ref bytesRead, 0);
-			if (bytesRead != Usb_read_array.Length)
-			{
-				return false;
-			}
-			return readResult;
-
-		}*/
 
 		public static bool readUSB()
 		{
@@ -2975,18 +2853,9 @@ namespace PICkit2V2
 				HIDOverlapped.OffsetHigh = 0;
 			}
 
-			//int l_overlapped = 0;
-			/*Kernel32.OVERLAPPED l_overlapped;
-			l_overlapped.hEvent = 0;
-			l_overlapped.Internal = 0;
-			l_overlapped.InternalHigh = 0;
-			l_overlapped.Offset = 0;
-			l_overlapped.OffsetHigh = 0;*/
-
 			if (LearnMode)
 				return true;
 
-			//bool readResult = USB.ReadFile(usbReadHandle, Usb_read_array, Usb_read_array.Length, ref bytesRead, ref HIDOverlapped);
 			Result = USB.ReadFile(usbReadHandle, Usb_read_array, Usb_read_array.Length, ref bytesRead, ref HIDOverlapped);
 
 			Result = USB.WaitForSingleObject(hEventObject, 1000);
@@ -3009,12 +2878,6 @@ namespace PICkit2V2
 
 						Result = USB.CancelIo(usbReadHandle);
 						retVal = false;
-						//A timeout may mean that the device has been removed.
-						//Close the device handles and set DeviceDetected = False
-						//so the next access attempt will search for the device.
-						//CloseHandle(ReadHandle);
-						//CloseHandle(DeviceHandle);
-						//DeviceDetected = FALSE;
 						break;
 					}
 				default:
@@ -3024,16 +2887,7 @@ namespace PICkit2V2
 			}
 			
 			USB.ResetEvent(hEventObject);
-
-			/*
-			if (bytesRead != Usb_read_array.Length)
-			{
-				return false;
-			}
-			return readResult;
-			*/
 			return retVal;
-
 		}
 
 		public static bool VerifyDeviceID(bool resetOnNoDevice, bool keepVddOn)

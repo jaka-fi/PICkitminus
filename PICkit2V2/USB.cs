@@ -133,18 +133,16 @@ namespace PICkit2V2
             byte[] Buffer,                      // data buffer
             int numBytesToWrite,                // num of bytes to write
             ref int numBytesWritten,            // number of bytes actually written
-            ref Kernel32.OVERLAPPED Overlapped                      // overlapped buffer - not used
-            //int Overlapped                      // overlapped buffer - not used
+            ref Kernel32.OVERLAPPED Overlapped  // overlapped buffer
             );
 
-        [DllImport("kernel32", SetLastError = true)]
+        [DllImport("kernel32.dll", SetLastError = true)]
         public static extern unsafe UInt32 ReadFile(
               IntPtr hFile,                       // handle to file
               byte[] Buffer,                      // data buffer
               int NumberOfBytesToRead,            // number of bytes to read
               ref int pNumberOfBytesRead,         // number of bytes read
-              ref Kernel32.OVERLAPPED Overlapped                      // overlapped buffer - not used
-              //int Overlapped                      // overlapped buffer - not used
+              ref Kernel32.OVERLAPPED Overlapped  // overlapped buffer
               );
 
         [DllImport("kernel32.dll", SetLastError = true)]
@@ -159,11 +157,6 @@ namespace PICkit2V2
         [DllImport("kernel32.dll")]
         public static extern IntPtr CreateEvent(IntPtr lpEventAttributes, bool bManualReset, bool bInitialState, string lpName);
 
-        //        public static bool Find_This_Device(ushort p_VendorID,
-        //                                           ushort p_PoductID,
-        //                                           ushort p_index,
-        //                                           ref IntPtr p_ReadHandle,
-        //                                           ref IntPtr p_WriteHandle)
         public static bool Find_This_Device(ushort p_index,
                                            ref IntPtr p_ReadHandle,
                                            ref IntPtr p_WriteHandle)
@@ -263,10 +256,6 @@ namespace PICkit2V2
                         Result = HidD_GetAttributes(l_temp_handle, ref DeviceAttributes);
                         if (Result != 0)
                         {
-//                            if (DeviceAttributes.VendorID == p_VendorID &&
-//                                DeviceAttributes.ProductID == p_PoductID)
-//                            if (DeviceAttributes.VendorID == KONST.MChipVendorID &&
-//                                (DeviceAttributes.ProductID == KONST.Pk2DeviceID || DeviceAttributes.ProductID == KONST.Pk3DeviceID))
                             if (DeviceAttributes.VendorID == KONST.MChipVendorID &&
                                 (DeviceAttributes.ProductID == KONST.Pk2DeviceID || 
                                 DeviceAttributes.ProductID == KONST.Pk3DeviceID ||
@@ -314,8 +303,6 @@ namespace PICkit2V2
                                     // get Product name string
                                     HidD_GetProductString(l_temp_handle, ptrBuffer, 126);
                                     PICkitFunctions.pkobDeviceString = Marshal.PtrToStringUni(ptrBuffer, 64);
-                                    //PICkitFunctions.pkobDeviceString = PICkitFunctions.pkobDeviceString.ToString();
-                                    //PICkitFunctions.pkobDeviceString = "jaka";
                                     Marshal.FreeHGlobal(ptrBuffer);
 
                                 }
@@ -386,169 +373,5 @@ namespace PICkit2V2
             SetupDiDestroyDeviceInfoList(DeviceInfoSet);
             return l_found_device;
         }
-        
-        /////////
-        /*
-        private void read_overlapped()
-            {
-            // anonymous
-            //   Thread this_thread = new Thread(delegate()
-            //       {
-            CONST.WAIT l_result = CONST.WAIT.WAIT_FAILED;
-            byte[] l_temp_read_buffer = new byte[CONST.PACKET_SIZE];
-            int l_num_bytes_read = 0;
-            int l_x = 0;
-            bool l_read = true;
-            bool l_com_func = false;
-            string l_temp = "";
-            string l_time = "";
-            string l_title = "";
-            string l_good_data_str = "";
-            string l_temp_str = "";
-
-            CONST.OVERLAPPED l_overlapped;
-            l_overlapped.hEvent = 0;
-            l_overlapped.Internal = 0;
-            l_overlapped.InternalHigh = 0;
-            l_overlapped.Offset = 0;
-            l_overlapped.OffsetHigh = 0;
-
-            
-                Array.Clear(l_temp_read_buffer, 0, l_temp_read_buffer.Length);
-
-                l_read = COMM.ReadFile(COMM.g_comm_params.HID_read_handle,
-                              l_temp_read_buffer,
-                              COMM.g_comm_params.irbl,
-                              ref l_num_bytes_read,
-                              ref l_overlapped); // COMM.g_comm_params.overlapped);
-                l_result = COMM.WaitForSingleObject(COMM.g_comm_params.overlapped.hEvent, 1000);                    
-                //
-                // testing portion
-                //    for (l_x = 0; l_x < m_send_byte_array.Length; l_x++)
-                //        {
-                //        l_temp_read_buffer[l_x] = m_send_byte_array[l_x];
-                //        }
-                l_result = COMM.WAIT.WAIT_OBJECT_0;
-                if (l_num_bytes_read == 0 ||
-                    !COMM.g_comm_params.we_are_in_read_loop)
-                    {
-                    // error with non-overlapped read - get out and don't print data
-                    break;
-                    }
-                switch (l_result)
-                    {
-                    case COMM.WAIT.WAIT_OBJECT_0:
-                            {
-                            //       COMM.ResetEvent(ref COMM.g_comm_params.overlapped.hEvent);  // don't know if need or not, maybe helps, maybe not
-                            // received data
-                            // process the data
-                            // reset l_temp_read_buffer
-                            for (l_x = 0; l_x < l_group_index_array.Length; l_x++)
-                                {
-                                l_group_index_array[l_x] = 100;  // greater than 32
-                                }
-                            // first, find location of all the groups within this packet
-                            l_com_func = COMM.find_groupings_within_this_packet(ref l_temp_read_buffer, ref l_group_index_array, ref l_num_groups_found);
-                            if (l_num_groups_found > l_group_index_array.Length)
-                                {
-                                MessageBox.Show("Found too many groups . . .");
-                                break;
-                                }
-                            if (l_com_func)
-                                {
-                                // now loop through these groups and display on listbox
-                                COMM.format_time(ref l_time);
-                                for (l_x = 0; l_x < l_num_groups_found; l_x++)
-                                    {
-                                    // get the display string
-                                    l_com_func = COMM.process_this_group(ref l_temp_read_buffer, l_group_index_array[l_x], ref l_good_data_str, ref l_title);
-                                    if (l_com_func)
-                                        {
-                                        l_temp = l_time + l_title;
-                                        m_display_receive_data_in_listbox_using_transaction_width_preference.Invoke(l_temp, ref l_good_data_str);
-                                        m_update_listbox_receive.Invoke("");
-                                        }
-                                    else
-                                        {
-                                        COMM.format_time(ref l_temp);
-                                        l_temp_str = "Could not interpret group within packet: \n" + l_good_data_str;
-                                        COMM.update_logfile(ref l_temp_str, true);
-                                        l_temp += l_temp_str;
-                                        m_update_listbox_receive.Invoke(l_temp);
-                                        m_update_listbox_receive.Invoke("");
-                                        }
-                                    //                                     m_blink_data_received.Invoke();
-                                    }
-                                }
-                            else
-                                {
-                                COMM.format_time(ref l_temp);
-                                l_temp_str = "USB packet formatted incorrectly - cannot interpret.";
-                                l_temp += l_temp_str;
-                                string l_str_temp = "";
-                                string l_byte_str = "";
-                                // just show the data
-                                for (int l_z = 0; l_z < l_num_bytes_read; l_z++)
-                                    {
-                                    if (l_num_bytes_read > COMM.Constants.PACKET_SIZE)
-                                        {
-                                        // somethings wrong - get out of here
-                                        break;
-                                        }
-                                    l_byte_str = string.Format("{0:X2} ", l_temp_read_buffer[l_z]);
-                                    l_str_temp += l_byte_str;
-                                    }
-                                m_display_receive_data_in_listbox_using_transaction_width_preference.Invoke(l_temp_str, ref l_str_temp);
-                                m_update_listbox_receive.Invoke("");
-                                m_blink_data_received.Invoke();
-                                }
-                            break;
-                            }
-                    case COMM.WAIT.WAIT_ABANDONED:
-                            {
-                            // error
-                            COMM.format_time(ref l_temp);
-                            l_temp_str = "Wait Abandoned Error while trying to read USB buffer.";
-                            COMM.update_logfile(ref l_temp_str, true);
-                            l_temp += l_temp_str;
-                            m_update_listbox_receive.Invoke(l_temp);
-                            m_update_listbox_receive.Invoke("");
-                            break;
-                            }
-                    case COMM.WAIT.WAIT_IO_COMPLETION:
-                            {
-                            // not sure what this is
-                            COMM.format_time(ref l_temp);
-                            l_temp_str += "Error - Wait IO Completion while trying to read USB buffer.";
-                            COMM.update_logfile(ref l_temp_str, true);
-                            l_temp += l_temp_str;
-                            m_update_listbox_receive.Invoke(l_temp);
-                            m_update_listbox_receive.Invoke("");
-                            break;
-                            }
-                    case COMM.WAIT.WAIT_TIMEOUT:
-                            {
-                            // no data arrived within alloted timeout - just repeat;
-                            COMM.CancelIo(COMM.g_comm_params.HID_read_handle);  // needed this or would sometimes get no response due to sync issues
-                            break;
-                            }
-                    case COMM.WAIT.WAIT_FAILED:
-                            {
-                            // error
-                            COMM.format_time(ref l_temp);
-                            l_temp += "Wait Fail Error while trying to read USB buffer.";
-                            m_update_listbox_receive.Invoke(l_temp);
-                            m_update_listbox_receive.Invoke("");
-                            break;
-                            }
-                    }
-                
-            m_change_polling_state.Invoke(false);  // just reset button
-            //     });
-            // this_thread.IsBackground = true;  // set so will stop when main thread is terminated
-            // this_thread.Name = "ReadThread";
-            // this_thread.Start();
-            }
-         */
     }
 }

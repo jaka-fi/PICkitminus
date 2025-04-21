@@ -6,12 +6,12 @@ using KONST = PICkit2V2.Constants;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("PICkit 2")]
+[assembly: AssemblyTitle("PICkitminus")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("Microchip Technology Inc.")]
+[assembly: AssemblyCompany("jaka")]
 [assembly: AssemblyProduct("PICkit2V2")]
-[assembly: AssemblyCopyright("Copyright © Microchip Technology Inc. 2012")]
+[assembly: AssemblyCopyright("Copyright © jaka 2021-2025. Copyright © Microchip Technology Inc. 2006-2012.")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

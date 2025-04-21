@@ -831,7 +831,7 @@ namespace PICkit2V2
 
 		[SuppressUnmanagedCodeSecurity]
 		[return: MarshalAs(UnmanagedType.Bool)]
-		[DllImport("User32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+		[DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
 		public static extern bool PeekMessage(out NativeMessage message,
 			IntPtr handle, uint filterMin, uint filterMax, uint flags);
 		private const UInt32 WM_MOUSEFIRST = 0x0200;

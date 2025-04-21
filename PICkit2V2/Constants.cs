@@ -7,7 +7,7 @@ namespace PICkit2V2
 	public class Constants
 	{
 		// APPLICATION VERSION
-		public const string AppVersion = "3.27.01";
+		public const string AppVersion = "3.27.02";
 		public const byte DevFileCompatLevel = 6;
 		public const byte DevFileCompatLevelMin = 0;
 		public const string UserGuideFileNamePK2 = "\\PICkit2 User Guide 51553E.pdf";
