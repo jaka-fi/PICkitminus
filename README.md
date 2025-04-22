@@ -1,6 +1,8 @@
 PICkit- software suite
 ======================
 
+__To download this software for Windows, see 'Releases' on right edge of this github page.__  &rarr;
+
 You can use your trusty old PICkit2 and PICkit3 with the new Microchip PIC microcontrollers with PICkitminus program. It adds support for many chips not covered by the original PICkit software. This repository has the GUI version of the software. See my another repository for the command line version, pk2cmd. Both will automatically detect PICkit2, PICkit3 and PKOB. The PICkit3 firmware is improved and now supports all the features as PICkit2 does.
 
 ![pickit2_pic18f26k83](https://github.com/user-attachments/assets/9ed3ad52-864f-4cc0-949c-1b05b7e3892c)
@@ -36,6 +38,10 @@ PKOB operation has been tested with the following development boards:
 - Explorer 16/32 Development Board (DM240001-2)
 
 Please Note that all new devboards have PKOB4 or some other solution, those are not supported. Also many older boards have been updated to new revision. For example Curiosity HPC board (DM164136) originally had PKOB (based on PICkit3), but revision 2 has PKOB4 (based on PICkit4). The easiest way is to look at the microcontroller type on the devboard. If it is PIC24FJ256GB106, it is very likely PKOB, and probably will work.
+
+Downloads
+---------
+To download this software for Windows, see 'Releases' on right edge of this github page.  &rarr;
 
 Thanks
 ------
