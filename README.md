@@ -9,7 +9,7 @@ You can use your trusty old PICkit2 and PICkit3 with the new Microchip PIC micro
 
 Features
 --------
-- Supports 1540 devices, inclding nearly all, if not all, 8-bit PIC microcontrollers which use ICSP
+- Supports 1540 devices, see [here](https://github.com/jaka-fi/PICkitminus/blob/master/PICkitminus_supported_devices.txt) for list
 - Supports PICkit2 and PICkit3 programmers, including clones and derivatives like PKOB, PICkit3.5 or [PK2M](http://kair.us/projects/pk2m_programmer/index.html)
 - Improved auto detection of parts
 - Programmer-to-go support with PICkit2 and PICkit3
