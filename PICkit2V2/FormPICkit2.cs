@@ -705,9 +705,13 @@ using Pk3h = PICkit2V2.PK3Helpers;
 //          Otherwise, the .ini file location will be the directory where the program
 //          was launched from. This allows to make 'portable' version of the software,
 //          where the settings will be kept in same directory as the software.
-
-
-
+//
+// version 3.27.02 - 29 Apr 2025 JAKA
+// Bug Fix: If LVP was enabled when starting software, and the first selected device
+//          was e.g. PIC24FV where LVP selection is actually HVP selection, the
+//          status box message incorrectly displayed 'Using low voltage program entry'
+// Feature: If in manual select mode, using LVP, and device is not detected, give a
+//          hint to try enable HVP (PIC24FV) or disable LVP (others).
 
 
 
@@ -3523,6 +3527,23 @@ namespace PICkit2V2
 					if ((Pk2.LastDeviceID == 0) || (Pk2.LastDeviceID == Pk2.DevFile.Families[family].DeviceIDMask))
 					{
 						displayStatusWindow.Text = "No device detected.";
+						if (Pk2.DevFile.PartsList[Pk2.ActivePart].LVPScript > 0)
+						{
+							string scriptname = Pk2.DevFile.Scripts[Pk2.DevFile.PartsList[Pk2.ActivePart].LVPScript - 1].ScriptName;
+							scriptname = scriptname.Substring(scriptname.Length - 2);
+							if (scriptname == "HV")
+							{
+								if (!toolStripMenuItemLVPEnabled.Checked)
+								{
+									displayStatusWindow.Text += "\nPerhaps try to enable HVP from Tools menu?";
+								}
+							}
+							else if (toolStripMenuItemLVPEnabled.Checked)
+							{
+								displayStatusWindow.Text += "\nPerhaps try to disable LVP from Tools menu?";
+							}
+						}
+							
 					}
 					else
 					{
@@ -7695,10 +7716,20 @@ namespace PICkit2V2
 			displayDataSource.Text = "None (Empty/Erased)";
 			// if (useLVP)
 			if (toolStripMenuItemLVPEnabled.Checked)
-			{ // Enable LVP on first device selected if supported
+			{ // Enable LVP (or HVP for some PIC24) on first device selected if supported
 				if (Pk2.DevFile.PartsList[Pk2.ActivePart].LVPScript > 0)
-					// toolStripMenuItemLVPEnabled.Checked = true;
-					displayStatusWindow.Text = "Using Low voltage program entry.";
+				{   // toolStripMenuItemLVPEnabled.Checked = true;
+					string scriptname = Pk2.DevFile.Scripts[Pk2.DevFile.PartsList[Pk2.ActivePart].LVPScript - 1].ScriptName;
+					scriptname = scriptname.Substring(scriptname.Length - 2);
+					if (scriptname == "HV")
+					{
+						displayStatusWindow.Text = "Using High voltage program entry.";
+					}
+					else
+					{
+						displayStatusWindow.Text = "Using Low voltage program entry.";
+					}
+				}
 				else
 				{
 					displayStatusWindow.Text = "The " + Pk2.DevFile.PartsList[Pk2.ActivePart].PartName + " doesn't support LVP.\nUsing HVP.";
