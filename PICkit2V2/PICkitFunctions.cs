@@ -747,6 +747,20 @@ namespace PICkit2V2
 			}
 		}
 
+		public static uint getEEBlank()
+		{
+			uint eeBlank = 0xFF;
+			if (DevFile.Families[GetActiveFamily()].EEMemAddressIncrement > 1)
+			{
+				eeBlank = 0xFFFF;
+			}
+			if (DevFile.Families[GetActiveFamily()].BlankValue == 0xFFF)
+			{
+				eeBlank = 0xFFF;
+			}
+			return eeBlank;
+		}
+
 		public static bool ExecuteScript(int scriptArrayIndex)
 		{
 			// IMPORTANT NOTE: THIS ALWAYS CLEARS THE UPLOAD BUFFER FIRST!
@@ -2702,6 +2716,10 @@ namespace PICkit2V2
 
 		public static bool writeUSB(byte[] commandList)
 		{
+			if (usbWriteHandle == IntPtr.Zero)
+            {
+				return false;
+            }
 			if (wrhEventObject == IntPtr.Zero)
 			{
 				wrhEventObject = USB.CreateEvent
@@ -2747,6 +2765,7 @@ namespace PICkit2V2
 						
 
 						Result = USB.CancelIo(usbWriteHandle);
+						DisconnectPICkit2Unit();
 						retVal = false;
 						//A timeout may mean that the device has been removed.
 						//Close the device handles and set DeviceDetected = False
@@ -2766,6 +2785,10 @@ namespace PICkit2V2
 		// Simiar to writeUSB but uses the format expected from an MPLAB host with the length at the end of the USB buffer
 		public static bool writeUSB_MPLAB(byte[] commandList)
 		{
+			if (usbWriteHandle == IntPtr.Zero)
+			{
+				return false;
+			}
 			int bytesWritten = 0;
 			int commandLength = commandList.Length;
 			uint Result;
@@ -2819,6 +2842,7 @@ namespace PICkit2V2
 
 
 						Result = USB.CancelIo(usbWriteHandle);
+						DisconnectPICkit2Unit();
 						retVal = false;
 						break;
 					}
@@ -2835,6 +2859,10 @@ namespace PICkit2V2
 
 		public static bool readUSB()
 		{
+			if (usbReadHandle == IntPtr.Zero)
+			{
+				return false;
+			}
 			int bytesRead = 0;
 			uint Result;
 			bool retVal = false;
@@ -2877,6 +2905,7 @@ namespace PICkit2V2
 						
 
 						Result = USB.CancelIo(usbReadHandle);
+						DisconnectPICkit2Unit();	// Disconnect to prevent multiple consecutive timeouts which would 'hang' the UI
 						retVal = false;
 						break;
 					}

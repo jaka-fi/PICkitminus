@@ -404,7 +404,7 @@ namespace PICkit2V2
             return Constants.FileRead.success;
         }
         
-        public static bool ExportHexFile(string filePath, bool progMem, bool eeMem)
+        public static bool ExportHexFile(string filePath, bool progMem, bool eeMem, bool packed)
         {
             if (filePath.Length > 4)
             {
@@ -438,26 +438,51 @@ namespace PICkit2V2
             int arrayIndex = 0;
             int bytesPerWord = Pk2.DevFile.Families[Pk2.GetActiveFamily()].ProgMemHexBytes;
             int arrayIncrement = 16 / bytesPerWord;     // # array words per hex line.
+            uint blankValue = Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue;
+            int numBlanks, numValidBytes;
             if (progMem)
             {
                 do
                 {
-                    string hexLine = string.Format(":10{0:X4}00", fileAddress);
-                    for (int i = 0; i < arrayIncrement; i++)
+                    numBlanks = 0;
+                    if (packed)
                     {
-                        // convert entire array word to hex string of 4 bytes.
-                        string hexWord = "00000000";
-                        if ((arrayIndex + i) < Pk2.DeviceBuffers.ProgramMemory.Length)
+                        for (int i = arrayIncrement-1; i >= 0; i--)
                         {
-                            hexWord = string.Format("{0:X8}", Pk2.DeviceBuffers.ProgramMemory[arrayIndex + i]);
-                        }
-                        for (int j = 0; j < bytesPerWord; j++)
-                        {
-                            hexLine += hexWord.Substring((6 - 2 * j), 2);
+                            // check if the line has data or blanks
+                            if (Pk2.DeviceBuffers.ProgramMemory[arrayIndex + i] == blankValue)
+                            {
+                                numBlanks++;
+                            }
+                            else
+                            {
+                                break;
+                            }
+
                         }
                     }
-                    hexLine += string.Format("{0:X2}", computeChecksum(hexLine));
-                    hexFile.WriteLine(hexLine);
+                    // string hexLine = string.Format(":10{0:X4}00", fileAddress);
+                    numValidBytes = 16 - numBlanks * bytesPerWord;
+                    if (numValidBytes > 0)
+                    {
+                        string hexLine = string.Format(":{0:X2}{1:X4}00", numValidBytes, fileAddress);
+                        for (int i = 0; i < (arrayIncrement - numBlanks); i++)
+                        {
+                            // convert entire array word to hex string of 4 bytes.
+                            string hexWord = "00000000";
+                            if ((arrayIndex + i) < Pk2.DeviceBuffers.ProgramMemory.Length)
+                            {
+                                hexWord = string.Format("{0:X8}", Pk2.DeviceBuffers.ProgramMemory[arrayIndex + i]);
+                            }
+                            for (int j = 0; j < bytesPerWord; j++)
+                            {
+                                hexLine += hexWord.Substring((6 - 2 * j), 2);
+                            }
+                        }
+                        hexLine += string.Format("{0:X2}", computeChecksum(hexLine));
+                        hexFile.WriteLine(hexLine);
+                    }
+                 
                     
                     fileAddress += 16;
                     arrayIndex += arrayIncrement;
@@ -521,15 +546,18 @@ namespace PICkit2V2
             if (eeMem)
             {
                 int eeSize = Pk2.DevFile.PartsList[Pk2.ActivePart].EEMem;
+                uint eeBlank = Pk2.getEEBlank();
                 arrayIndex = 0;
                 if (eeSize > 0)
                 {
                     uint eeAddr = Pk2.DevFile.PartsList[Pk2.ActivePart].EEAddr;
+                    string segmentLine = "";
+                    bool pendingSegmentLine = false;
                     if ((eeAddr & 0xFFFF0000) > 0)
                     { // need a segment address
-                        string segmentLine = string.Format(":02000004{0:X4}", (eeAddr >> 16));
+                        segmentLine = string.Format(":02000004{0:X4}", (eeAddr >> 16));
                         segmentLine += string.Format("{0:X2}", computeChecksum(segmentLine));
-                        hexFile.WriteLine(segmentLine);
+                        pendingSegmentLine = true;
                     }
                     
                     fileAddress = (int)eeAddr & 0xFFFF;
@@ -537,18 +565,54 @@ namespace PICkit2V2
                     arrayIncrement = 16 / eeBytesPerWord;     // # array words per hex line.
                     do
                     {
-                        string hexLine = string.Format(":10{0:X4}00", fileAddress);
-                        for (int i = 0; i < arrayIncrement; i++)
+                        numBlanks = 0;
+                        if (packed)
                         {
-                            // convert entire array word to hex string of 4 bytes.
-                            string hexWord = string.Format("{0:X8}", Pk2.DeviceBuffers.EEPromMemory[arrayIndex + i]);
-                            for (int j = 0; j < eeBytesPerWord; j++)
+                            for (int i = arrayIncrement - 1; i >= 0; i--)
                             {
-                                hexLine += hexWord.Substring((6 - 2 * j), 2);
+                                // check if the line has data or blanks
+                                if (Pk2.DeviceBuffers.EEPromMemory[arrayIndex + i] == eeBlank)
+                                {
+                                    numBlanks++;
+                                }
+                                else
+                                {
+                                    if (pendingSegmentLine)     // Write the segmentLine only if buffer contains EEPROM data
+                                    {
+                                        hexFile.WriteLine(segmentLine);
+                                        pendingSegmentLine = false;
+                                    }
+                                    break;
+                                }
+
                             }
                         }
-                        hexLine += string.Format("{0:X2}", computeChecksum(hexLine));
-                        hexFile.WriteLine(hexLine);
+                        else
+                        {
+                            if (pendingSegmentLine)     // Always write the segmentLine if not packed
+                            {
+                                hexFile.WriteLine(segmentLine);
+                                pendingSegmentLine = false;
+                            }
+                        }
+
+                        numValidBytes = 16 - numBlanks * eeBytesPerWord;
+                        if (numValidBytes > 0)
+                        {
+                            //string hexLine = string.Format(":10{0:X4}00", fileAddress);
+                            string hexLine = string.Format(":{0:X2}{1:X4}00", numValidBytes, fileAddress);
+                            for (int i = 0; i < (arrayIncrement - numBlanks); i++)
+                            {
+                                // convert entire array word to hex string of 4 bytes.
+                                string hexWord = string.Format("{0:X8}", Pk2.DeviceBuffers.EEPromMemory[arrayIndex + i]);
+                                for (int j = 0; j < eeBytesPerWord; j++)
+                                {
+                                    hexLine += hexWord.Substring((6 - 2 * j), 2);
+                                }
+                            }
+                            hexLine += string.Format("{0:X2}", computeChecksum(hexLine));
+                            hexFile.WriteLine(hexLine);
+                        }
 
                         fileAddress += 16;
                         arrayIndex += arrayIncrement;                
@@ -631,15 +695,29 @@ namespace PICkit2V2
             if (progMem)
             {
                 int userIDs = Pk2.DevFile.PartsList[Pk2.ActivePart].UserIDWords;
+                int userIDBytes = Pk2.DevFile.Families[Pk2.GetActiveFamily()].UserIDBytes;
                 arrayIndex = 0;
+
+                uint userIDBlank = Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue;
+                if (userIDBytes == 1)
+                {
+                    userIDBlank &= 0xFF;
+                }
+                else if (userIDBytes == 2)
+                {
+                    userIDBlank &= 0xFFFF;
+                }
+
                 if (userIDs > 0)
                 {
                     uint uIDAddr = Pk2.DevFile.PartsList[Pk2.ActivePart].UserIDAddr;
+                    string segmentLine = "";
+                    bool pendingSegmentLine = false;
                     if ((uIDAddr & 0xFFFF0000) > 0)
                     { // need a segment address
-                        string segmentLine = string.Format(":02000004{0:X4}", (uIDAddr >> 16));
+                        segmentLine = string.Format(":02000004{0:X4}", (uIDAddr >> 16));
                         segmentLine += string.Format("{0:X2}", computeChecksum(segmentLine));
-                        hexFile.WriteLine(segmentLine);
+                        pendingSegmentLine = true;
                     }
 
                     fileAddress = (int)uIDAddr & 0xFFFF;
@@ -651,24 +729,64 @@ namespace PICkit2V2
                         int remainingBytes = (userIDs - arrayIndex) * idBytesPerWord;
                         if (remainingBytes < 16)
                         {
-                            hexLine = string.Format(":{0:X2}{1:X4}00", remainingBytes, fileAddress);
                             arrayIncrement = (userIDs - arrayIndex);
+                        }
+                        numBlanks = 0;
+                        if (packed)
+                        {
+                            for (int i = arrayIncrement - 1; i >= 0; i--)
+                            {
+                                // check if the line has data or blanks
+                                if (Pk2.DeviceBuffers.UserIDs[arrayIndex + i] == userIDBlank)
+                                {
+                                    numBlanks++;
+                                }
+                                else
+                                {
+                                    if (pendingSegmentLine)     // Write the segmentLine only if buffer contains UserID data
+                                    {
+                                        hexFile.WriteLine(segmentLine);
+                                        pendingSegmentLine = false;
+                                    }
+                                    break;
+                                }
+
+                            }
                         }
                         else
                         {
-                            hexLine = string.Format(":10{0:X4}00", fileAddress);
-                        }
-                        for (int i = 0; i < arrayIncrement; i++)
-                        {
-                            // convert entire array word to hex string of 4 bytes.
-                            string hexWord = string.Format("{0:X8}", Pk2.DeviceBuffers.UserIDs[arrayIndex + i]);
-                            for (int j = 0; j < idBytesPerWord; j++)
+                            if (pendingSegmentLine)     // Always write the segmentLine if not packed
                             {
-                                hexLine += hexWord.Substring((6 - 2 * j), 2);
+                                hexFile.WriteLine(segmentLine);
+                                pendingSegmentLine = false;
                             }
                         }
-                        hexLine += string.Format("{0:X2}", computeChecksum(hexLine));
-                        hexFile.WriteLine(hexLine);
+
+
+                        numValidBytes = 16 - numBlanks * idBytesPerWord;
+                        if (numValidBytes > 0)
+                        {
+                            if (remainingBytes < 16)
+                            {
+                                hexLine = string.Format(":{0:X2}{1:X4}00", (remainingBytes - numBlanks * idBytesPerWord), fileAddress);
+                                //arrayIncrement = (userIDs - arrayIndex);
+                            }
+                            else
+                            {
+                                hexLine = string.Format(":{0:X2}{1:X4}00", numValidBytes, fileAddress);
+                            }
+                            for (int i = 0; i < (arrayIncrement - numBlanks); i++)
+                            {
+                                // convert entire array word to hex string of 4 bytes.
+                                string hexWord = string.Format("{0:X8}", Pk2.DeviceBuffers.UserIDs[arrayIndex + i]);
+                                for (int j = 0; j < idBytesPerWord; j++)
+                                {
+                                    hexLine += hexWord.Substring((6 - 2 * j), 2);
+                                }
+                            }
+                            hexLine += string.Format("{0:X2}", computeChecksum(hexLine));
+                            hexFile.WriteLine(hexLine);
+                        }
 
                         fileAddress += 16;
                         arrayIndex += arrayIncrement;
@@ -721,6 +839,13 @@ namespace PICkit2V2
             }
             //end of record line.
             hexFile.WriteLine(":00000001FF");
+            hexFile.WriteLine(";" + Pk2.DevFile.PartsList[Pk2.ActivePart].PartName);
+            hexFile.WriteLine(";Source: " + FormPICkit2.bufferSource);
+            string value;
+            DateTime now = new DateTime();
+            now = System.DateTime.Now;
+            value = ";Exported " + now.Date.ToShortDateString() + " " + now.ToShortTimeString() + " from PICkitminus " + Constants.AppVersion;
+            hexFile.WriteLine(value);
             hexFile.Close();
             return true;
         }

@@ -706,13 +706,16 @@ using Pk3h = PICkit2V2.PK3Helpers;
 //          was launched from. This allows to make 'portable' version of the software,
 //          where the settings will be kept in same directory as the software.
 //
-// version 3.27.02 - 29 Apr 2025 JAKA
+// version 3.27.02 - 5 May 2025 JAKA
 // Bug Fix: If LVP was enabled when starting software, and the first selected device
 //          was e.g. PIC24FV where LVP selection is actually HVP selection, the
 //          status box message incorrectly displayed 'Using low voltage program entry'
 // Feature: If in manual select mode, using LVP, and device is not detected, give a
 //          hint to try enable HVP (PIC24FV) or disable LVP (others).
-
+// Feature: Remove blanks from exported .hex files to minimize file size. Original
+//          behaviour to write all data can be restored by changing setting EXPP:
+//          from Y to N in .ini file.	
+// Feature: Add comments to end of hex file to indicate chip, source and date		
 
 
 
@@ -768,6 +771,7 @@ namespace PICkit2V2
 		public static string WarningWavFile = "\\Sounds\\warning.wav";
 		public static bool PlayErrorWav = false;
 		public static string ErrorWavFile = "\\Sounds\\error.wav";
+		public static string bufferSource = "";
 		//private static int[] familyMenuTable;   // Keeps track of which menu index is which family index
 		private static bool selfPoweredTarget;
 		private static KONST.StatusColor statusWindowColor = Constants.StatusColor.normal;
@@ -805,6 +809,7 @@ namespace PICkit2V2
 		private bool usePE33 = true;
 		private bool usePE24 = true;
 		private bool blockingReadEnabled = false;
+		private bool exportPacked = true;
 		private bool deviceVerification = true;
 		private byte ptgMemory = 0; // 128K default
 		private string lastFamily = "Midrange";
@@ -981,6 +986,7 @@ namespace PICkit2V2
 		public void ShowMemEdited()
 		{
 			displayDataSource.Text = "Edited.";
+			bufferSource = "Edited.";
 			checkImportFile = false;
 		}
 
@@ -1563,6 +1569,7 @@ namespace PICkit2V2
 				displayStatusWindow.BackColor = Color.Salmon;
 				displayStatusWindow.Text =
 					"No PICkit devices found.  Check USB connections\nand use Tools -> Check Communication to retry.";
+				//Pk2.DisconnectPICkit2Unit();		// Ensures read and write handles are null if no device found, doesn't seem to be needed
 				return false;
 			}
 		}
@@ -3256,6 +3263,7 @@ namespace PICkit2V2
 				displayStatusWindow.Text = "Device Error - hex file not loaded.";
 				statusWindowColor = Constants.StatusColor.red;
 				displayDataSource.Text = "None.";
+				bufferSource = "None";
 				importGo = false;
 				return false;
 			}
@@ -3310,6 +3318,8 @@ namespace PICkit2V2
 					{
 						displayStatusWindow.Text += "\nOnly EEPROM data imported.";
 					}
+					//bufferSource = "Original file: " + shortenHex(openHexFileDialog.FileName);
+					bufferSource = shortenHex(openHexFileDialog.FileName);
 					if (multiWindow)
 						displayDataSource.Text = openHexFileDialog.FileName;
 					else
@@ -3322,6 +3332,7 @@ namespace PICkit2V2
 					statusWindowColor = Constants.StatusColor.yellow;
 					displayStatusWindow.Text =
 						"Warning: No configuration words in hex file.\nIn MPLAB use File-Export to save hex with config.";
+					bufferSource = shortenHex(openHexFileDialog.FileName);
 					if (multiWindow)
 						displayDataSource.Text = openHexFileDialog.FileName;
 					else
@@ -3334,6 +3345,7 @@ namespace PICkit2V2
 					statusWindowColor = Constants.StatusColor.yellow;
 					displayStatusWindow.Text =
 						"Warning: Some configuration words not in hex file.\nEnsure default values above right are acceptable.";
+					bufferSource = shortenHex(openHexFileDialog.FileName);
 					if (multiWindow)
 						displayDataSource.Text = openHexFileDialog.FileName;
 					else
@@ -3345,6 +3357,7 @@ namespace PICkit2V2
 				case Constants.FileRead.largemem:
 					statusWindowColor = Constants.StatusColor.yellow;
 					displayStatusWindow.Text = "Warning: " + fileType + " File Loaded is larger than device.";
+					bufferSource = shortenHex(openHexFileDialog.FileName);
 					if (multiWindow)
 						displayDataSource.Text = openHexFileDialog.FileName;
 					else
@@ -3356,6 +3369,7 @@ namespace PICkit2V2
 				default:
 					statusWindowColor = Constants.StatusColor.red;
 					displayStatusWindow.Text = "Error reading " + fileType + " file.";
+					bufferSource = "None (Empty/Erased)";
 					displayDataSource.Text = "None (Empty/Erased)";
 					checkImportFile = false;
 					importGo = false;
@@ -3465,7 +3479,10 @@ namespace PICkit2V2
 
 		private void exportHexFile(object sender, CancelEventArgs e)
 		{
-			ImportExportHex.ExportHexFile(saveHexFileDialog.FileName, checkBoxProgMemEnabled.Checked, checkBoxEEMem.Checked);
+			if (ImportExportHex.ExportHexFile(saveHexFileDialog.FileName, checkBoxProgMemEnabled.Checked, checkBoxEEMem.Checked, exportPacked))
+            {
+				displayStatusWindow.Text = "File succesfully exported.";
+			}
 		}
 
 		private bool preProgrammingCheck(int family, bool updateGuiControls)
@@ -4003,6 +4020,7 @@ namespace PICkit2V2
 				displayStatusWindow.Text += "Done.";
 				// update SOURCE box
 				displayDataSource.Text = "Read from " + Pk2.DevFile.PartsList[Pk2.ActivePart].PartName;
+				bufferSource = "Read from " + Pk2.DevFile.PartsList[Pk2.ActivePart].PartName;
 			}
 			else
 			{
@@ -4010,6 +4028,7 @@ namespace PICkit2V2
 				statusWindowColor = Constants.StatusColor.yellow;
 				// update SOURCE box
 				displayDataSource.Text = "Partially read from " + Pk2.DevFile.PartsList[Pk2.ActivePart].PartName;
+				bufferSource = "Partially read from " + Pk2.DevFile.PartsList[Pk2.ActivePart].PartName;
 			}
 
 			checkImportFile = false;
@@ -4046,7 +4065,7 @@ namespace PICkit2V2
 			int wordsPerLoop = scriptRunsToFillUpload * Pk2.DevFile.PartsList[Pk2.ActivePart].EERdLocations;
 			int wordsRead = 0;
 
-			uint eeBlank = getEEBlank();
+			uint eeBlank = Pk2.getEEBlank();
 
 			progressBar1.Value = 0;     // reset bar
 			progressBar1.Maximum = (int)Pk2.DevFile.PartsList[Pk2.ActivePart].EEMem / wordsPerLoop;
@@ -4197,6 +4216,7 @@ namespace PICkit2V2
 				else
 				{
 					displayDataSource.Text = "None (Empty/Erased)";
+					bufferSource = "None (Empty/Erased)";
 				}
 				updateGUI(KONST.UpdateMemoryDisplays, KONST.EnableMclrCheckBox, KONST.DontUpdateProtections);
 				return;
@@ -4414,6 +4434,7 @@ namespace PICkit2V2
 			if (toolStripMenuItemClearBuffersErase.Checked)
 			{
 				displayDataSource.Text = "None (Empty/Erased)";
+				bufferSource = "None (Empty/Erased)";
 			}
 			checkImportFile = false;
 
@@ -5022,7 +5043,7 @@ namespace PICkit2V2
 				}
 
 				int bytesPerWord = Pk2.DevFile.Families[Pk2.GetActiveFamily()].EEMemBytesPerWord;
-				uint eeBlank = getEEBlank();
+				uint eeBlank = Pk2.getEEBlank();
 
 				// write at least 16 locations per loop
 				int locationsPerLoop = Pk2.DevFile.PartsList[Pk2.ActivePart].EEWrLocations;
@@ -5689,19 +5710,6 @@ namespace PICkit2V2
 
 		private bool blankCheckDevice()
 		{
-			/*if (Pk2.FamilyIsKeeloq() || Pk2.FamilyIsMCP())
-			{
-				displayStatusWindow.Text = "Blank Check not supported for this device type.";
-				statusWindowColor = Constants.StatusColor.yellow;
-				updateGUI(KONST.DontUpdateMemDisplays, KONST.DontEnableMclrCheckBox);
-				return false; // abort
-			}
-
-			if (!preProgrammingCheck(Pk2.GetActiveFamily(),false))
-			{
-				return false; // abort
-			}*/
-
 			if (Pk2.FamilyIsPIC32())
 			{
 				if (P32.PIC32BlankCheck())
@@ -5959,7 +5967,7 @@ namespace PICkit2V2
 				}
 
 				int bytesPerLoc = Pk2.DevFile.Families[Pk2.GetActiveFamily()].EEMemBytesPerWord;
-				uint eeBlank = getEEBlank();
+				uint eeBlank = Pk2.getEEBlank();
 				int scriptRuns2FillUpload = KONST.UploadBufferSize /
 					(Pk2.DevFile.PartsList[Pk2.ActivePart].EERdLocations * bytesPerLoc);
 				int locPerLoop = scriptRuns2FillUpload * Pk2.DevFile.PartsList[Pk2.ActivePart].EERdLocations;
@@ -6258,6 +6266,7 @@ namespace PICkit2V2
 						(uint)(value & Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue);
 
 			displayDataSource.Text = "Edited.";
+			bufferSource = "Edited.";
 			checkImportFile = false;
 
 			progMemJustEdited = true;
@@ -6284,9 +6293,10 @@ namespace PICkit2V2
 				numColumns /= 2;
 			}
 
-			Pk2.DeviceBuffers.EEPromMemory[((row * numColumns) + col - 1)] = (uint)(value & getEEBlank());
+			Pk2.DeviceBuffers.EEPromMemory[((row * numColumns) + col - 1)] = (uint)(value & Pk2.getEEBlank());
 
 			displayDataSource.Text = "Edited.";
+			bufferSource = "Edited.";
 			checkImportFile = false;
 
 			eeMemJustEdited = true;
@@ -6341,6 +6351,7 @@ namespace PICkit2V2
 			}
 
 			displayDataSource.Text = "None (Empty/Erased)";
+			bufferSource = "None (Empty/Erased)";
 
 			checkForPowerErrors();
 
@@ -6763,7 +6774,7 @@ namespace PICkit2V2
 				int locPerLoop = scriptRuns2FillUpload * Pk2.DevFile.PartsList[Pk2.ActivePart].EERdLocations;
 				int locsRead = 0;
 
-				uint eeBlank = getEEBlank();
+				uint eeBlank = Pk2.getEEBlank();
 
 				progressBar1.Value = 0;     // reset bar
 				progressBar1.Maximum = (int)Pk2.DevFile.PartsList[Pk2.ActivePart].EEMem / locPerLoop;
@@ -7673,6 +7684,7 @@ namespace PICkit2V2
 			}
 
 			displayDataSource.Text = "None (Empty/Erased)";
+			bufferSource = "None (Empty/Erased)";
 		}
 
 		private void buildDeviceSelectDropDown(int family)
@@ -7714,6 +7726,7 @@ namespace PICkit2V2
 			Pk2.PrepNewPart(true);
 			setGUIVoltageLimits(true);
 			displayDataSource.Text = "None (Empty/Erased)";
+			bufferSource = "None (Empty/Erased)";
 			// if (useLVP)
 			if (toolStripMenuItemLVPEnabled.Checked)
 			{ // Enable LVP (or HVP for some PIC24) on first device selected if supported
@@ -8245,6 +8258,12 @@ namespace PICkit2V2
 				value = "Y";
 			}
 			hexFile.WriteLine("BREN: " + value);
+			value = "N";
+			if (exportPacked == true)
+			{
+				value = "Y";
+			}
+			hexFile.WriteLine("EXPP: " + value);
 
 
 			hexFile.Flush();
@@ -8914,6 +8933,12 @@ namespace PICkit2V2
 									blockingReadEnabled = true;
 								}
 								break;
+							case "EXPP:":
+								if (string.Compare(fileLine.Substring(6, 1), "N") == 0)
+								{
+									exportPacked = true;
+								}
+								break;
 							// END JAKA
 
 							default:
@@ -9313,8 +9338,8 @@ namespace PICkit2V2
 				dialogIDMemory.Show();
 			}
 		}
-
-		private uint getEEBlank()
+		/*
+		public uint getEEBlank()
 		{
 			uint eeBlank = 0xFF;
 			if (Pk2.DevFile.Families[Pk2.GetActiveFamily()].EEMemAddressIncrement > 1)
@@ -9326,7 +9351,7 @@ namespace PICkit2V2
 				eeBlank = 0xFFF;
 			}
 			return eeBlank;
-		}
+		}*/
 
 		private void restoreVddTarget()
 		{
@@ -10752,6 +10777,7 @@ namespace PICkit2V2
 			if (ConfigsEdited)
 			{
 				displayDataSource.Text = "Edited.";
+				bufferSource = "Edited.";
 				checkImportFile = false;
 				ConfigsEdited = false;
 			}
