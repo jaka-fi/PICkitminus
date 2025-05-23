@@ -716,6 +716,14 @@ using Pk3h = PICkit2V2.PK3Helpers;
 //          behaviour to write all data can be restored by changing setting EXPP:
 //          from Y to N in .ini file.	
 // Feature: Add comments to end of hex file to indicate chip, source and date		
+//
+// version 3.27.03 - 11 May 2025 JAKA
+// Bug Fix: Show correct config addresses in configuration editor for PIC24/dsPIC
+//          chips which use 'NewStyleConfigs'.
+// Bug Fix: Show correct config register names in configuration editor for dsPIC33CK
+//          and PIC24FJ Gx 2/6xx
+// Bug Fix: Don't write unnecessary segment lines when exporting packed .hex file
+//          from device with big program flash.
 
 
 
@@ -3664,20 +3672,6 @@ namespace PICkit2V2
 
 		private void deviceRead()
 		{
-			/*
-			if (Pk2.FamilyIsKeeloq())
-			{
-				displayStatusWindow.Text = "Read not supported for this device type.";
-				statusWindowColor = Constants.StatusColor.yellow;
-				updateGUI(KONST.DontUpdateMemDisplays, KONST.DontEnableMclrCheckBox);
-				return; // abort
-			}
-			
-			if (!preProgrammingCheck(Pk2.GetActiveFamily(),false))
-			{
-				return; // abort
-			}
-			*/
 			if (Pk2.FamilyIsPIC32())
 			{
 				if (P32.PIC32Read())
@@ -3977,9 +3971,6 @@ namespace PICkit2V2
 				//displayStatusWindow.Update();            
 				this.Update();
 
-				//if ((Pk2.DevFile.PartsList[Pk2.ActivePart].ProgMemPanelBufs & 0xf0) == 160
-				//	|| (Pk2.DevFile.PartsList[Pk2.ActivePart].ProgMemPanelBufs & 0xf0) == 176
-				//	|| (Pk2.DevFile.PartsList[Pk2.ActivePart].ProgMemPanelBufs & 0xf0) == 192)
 				if (Pk2.NewStyleConfigs())
 				{
 					Pk2.DeviceBuffers.ConfigWords[0] = Pk2.DeviceBuffers.ProgramMemory[configLocation];

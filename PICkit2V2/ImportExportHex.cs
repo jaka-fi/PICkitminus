@@ -442,6 +442,8 @@ namespace PICkit2V2
             int numBlanks, numValidBytes;
             if (progMem)
             {
+                string segmentLine = "";
+                bool pendingSegmentLine = false;
                 do
                 {
                     numBlanks = 0;
@@ -456,6 +458,11 @@ namespace PICkit2V2
                             }
                             else
                             {
+                                if (pendingSegmentLine)     // Write the segmentLine only if segment contains data
+                                {
+                                    hexFile.WriteLine(segmentLine);
+                                    pendingSegmentLine = false;
+                                }
                                 break;
                             }
 
@@ -492,10 +499,16 @@ namespace PICkit2V2
                     {
                         fileSegment += fileAddress >> 16;
                         fileAddress &= 0xFFFF;
-                        string segmentLine = string.Format(":02000004{0:X4}", fileSegment);
+                        segmentLine = string.Format(":02000004{0:X4}", fileSegment);
                         segmentLine += string.Format("{0:X2}", computeChecksum(segmentLine));
-                        hexFile.WriteLine(segmentLine); 
-                                          
+                        if (packed)
+                        {
+                            pendingSegmentLine = true;
+                        }
+                        else
+                        {
+                            hexFile.WriteLine(segmentLine);     // Always write the segmentLine if not packed
+                        }
                     }
                 
                 } while (arrayIndex < programEnd);

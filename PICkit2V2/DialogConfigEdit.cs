@@ -317,8 +317,26 @@ namespace PICkit2V2
             // 16-bit
             else if (Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue == 0xFFFFFF)
             {
+                if ((Pk2.DevFile.PartsList[Pk2.ActivePart].ProgMemPanelBufs & 0xf0) == 224         // dsPIC33CK (RIPE_23)
+                    || (Pk2.DevFile.PartsList[Pk2.ActivePart].ProgMemPanelBufs & 0xf0) == 240)     // PIC24FJ Gx 2/6xx (RIPE_18a)
+                {
+                
+                    cfgNames[0] = "FSEC";
+                    cfgNames[1] = "FBSLIM";
+                    cfgNames[2] = "FSIGN";
+                    cfgNames[3] = "FOSCSEL";
+                    cfgNames[4] = "FOSC";
+                    cfgNames[5] = "FWDT";
+                    cfgNames[6] = "FPOR";
+                    cfgNames[7] = "FICD";
+                    cfgNames[8] = "FDMTIVTL";
+                    configAddress = (int)Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigAddr / 2;
+                    configIncrement = 4;
+
+                }
+
                 // PIC24F
-                if (Pk2.FamilyIsPIC24FJ())
+                else if (Pk2.FamilyIsPIC24FJ())
                 {
                     for (int cw = 1; cw <= editConfigWords; cw ++)
                     {
@@ -342,7 +360,7 @@ namespace PICkit2V2
                     configAddress = (int)Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigAddr / 2;
                     configIncrement = 2;
                 }
-                // PIC24H, dsPIC33, dsPIC30 SMPS, PIC24F-KA-
+                 // PIC24H, dsPIC33, dsPIC30 SMPS, PIC24F-KA-
                 else if (Pk2.FamilyIsPIC24H() || Pk2.FamilyIsdsPIC33F() || Pk2.FamilyIsdsPIC30SMPS()
                         || (editConfigWords == 9))
                 {
@@ -401,6 +419,8 @@ namespace PICkit2V2
                 configIncrement = 2;
             }
 
+            int jump = 0;
+
             for (int w = 0; w < K_MAXCONFIGS; w++)
             {
                 if (w < editConfigWords)
@@ -410,7 +430,12 @@ namespace PICkit2V2
                     
                     }
                     configWords[w].name.Text = cfgNames[w];
-                    configWords[w].addr.Text = string.Format("{0:X}", configAddress + (w * configIncrement));
+                    if (Pk2.NewStyleConfigs() && w == 1)
+                    {
+                        configIncrement = 4;
+                        jump = 3 * configIncrement;
+                    }
+                    configWords[w].addr.Text = string.Format("{0:X}", configAddress + (w * configIncrement + jump));
                     ushort cword = (ushort)Pk2.DeviceBuffers.ConfigWords[w];
                     if (displayMask == 0)
                         cword &= (ushort)Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[w];
