@@ -7,23 +7,28 @@ namespace PICkit2V2
     public class DeviceData
     {
         public uint[] ProgramMemory;
+        public uint[] AuxMemory;
         public uint[] EEPromMemory;
         public uint[] ConfigWords;
         public uint[] UserIDs;
         public uint OSCCAL;
         public uint BandGap;
        
-        public DeviceData(uint progMemSize, ushort eeMemSize, byte numConfigs, ushort numIDs, 
+        public DeviceData(uint progMemSize, uint auxMemorySize, ushort eeMemSize, byte numConfigs, ushort numIDs, 
                             uint memBlankVal, int eeBytes, int idBytes, ushort[] configBlank, uint OSCCALInit)
         {   // Overloaded Constructor
             ProgramMemory = new uint[progMemSize];
+            AuxMemory = new uint[auxMemorySize];
             EEPromMemory = new uint[eeMemSize];
             ConfigWords = new uint[numConfigs];
             UserIDs = new uint[numIDs];
-            
+
             //init program memory to blank
-           ClearProgramMemory(memBlankVal);
-            
+            ClearProgramMemory(memBlankVal);
+
+            //init auxiliary flash memory to blank
+            ClearAuxMemory(memBlankVal);
+
             //init eeprom to blank
             ClearEEPromMemory(eeBytes, memBlankVal);
 
@@ -46,6 +51,17 @@ namespace PICkit2V2
                 for (int i = 0; i < ProgramMemory.Length; i++)
                 {
                     ProgramMemory[i] = memBlankVal;
+                }
+            }
+        }
+
+        public void ClearAuxMemory(uint memBlankVal)
+        {
+            if (AuxMemory.Length > 0)
+            {
+                for (int i = 0; i < AuxMemory.Length; i++)
+                {
+                    AuxMemory[i] = memBlankVal;
                 }
             }
         }

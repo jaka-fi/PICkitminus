@@ -51,7 +51,7 @@
         }
         "Entry"
         {
-        "MsmKey" = "8:_4E3D5E46CF5E44B7B92320D809A7E697"
+        "MsmKey" = "8:_426C29C805B245179C4B295FEFA7EEC4"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
         }
@@ -69,19 +69,25 @@
         }
         "Entry"
         {
+        "MsmKey" = "8:_5D712C0482B44D58A2D2BCA2EF6EDD8D"
+        "OwnerKey" = "8:_UNDEFINED"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
         "MsmKey" = "8:_6AE31FB252D646059A70F9AD07C35FD2"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
         }
         "Entry"
         {
-        "MsmKey" = "8:_6C86F468249E44CA811110EF0598E57D"
+        "MsmKey" = "8:_6DE46926C8864B5FBC8882DFF240F312"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
         }
         "Entry"
         {
-        "MsmKey" = "8:_6DE46926C8864B5FBC8882DFF240F312"
+        "MsmKey" = "8:_72B4F06516E549F09BEB78AA183FC4E7"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
         }
@@ -106,18 +112,6 @@
         "Entry"
         {
         "MsmKey" = "8:_B934D1D723EE409F916DA54F3668F640"
-        "OwnerKey" = "8:_UNDEFINED"
-        "MsmSig" = "8:_UNDEFINED"
-        }
-        "Entry"
-        {
-        "MsmKey" = "8:_BB152C9177254C26B0311239F151113A"
-        "OwnerKey" = "8:_UNDEFINED"
-        "MsmSig" = "8:_UNDEFINED"
-        }
-        "Entry"
-        {
-        "MsmKey" = "8:_BB2BAEA51E004737944095A2749071C1"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
         }
@@ -329,10 +323,10 @@
             "IsDependency" = "11:FALSE"
             "IsolateTo" = "8:"
             }
-            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_4E3D5E46CF5E44B7B92320D809A7E697"
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_426C29C805B245179C4B295FEFA7EEC4"
             {
-            "SourcePath" = "8:..\\PICkit2V2\\bin\\Release\\PK2V023200.hex"
-            "TargetName" = "8:PK2V023200.hex"
+            "SourcePath" = "8:..\\PICkit2V2\\bin\\Release\\PK2MV023202.hex"
+            "TargetName" = "8:PK2MV023202.hex"
             "Tag" = "8:"
             "Folder" = "8:_732EC017B72740F9A6D4A79C884CFCE7"
             "Condition" = "8:"
@@ -389,6 +383,26 @@
             "IsDependency" = "11:FALSE"
             "IsolateTo" = "8:"
             }
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_5D712C0482B44D58A2D2BCA2EF6EDD8D"
+            {
+            "SourcePath" = "8:..\\PICkit2V2\\bin\\Release\\PK2V023202.hex"
+            "TargetName" = "8:PK2V023202.hex"
+            "Tag" = "8:"
+            "Folder" = "8:_732EC017B72740F9A6D4A79C884CFCE7"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:FALSE"
+            "IsolateTo" = "8:"
+            }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_6AE31FB252D646059A70F9AD07C35FD2"
             {
             "SourcePath" = "8:..\\PICkit2V2\\bin\\Release\\PK3BLV011405.hex"
@@ -409,10 +423,10 @@
             "IsDependency" = "11:FALSE"
             "IsolateTo" = "8:"
             }
-            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_6C86F468249E44CA811110EF0598E57D"
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_6DE46926C8864B5FBC8882DFF240F312"
             {
-            "SourcePath" = "8:..\\PICkit2V2\\bin\\Release\\PK2V023201.hex"
-            "TargetName" = "8:PK2V023201.hex"
+            "SourcePath" = "8:..\\PICkit2V2\\bin\\Release\\PK2DeviceFile.dat"
+            "TargetName" = "8:PK2DeviceFile.dat"
             "Tag" = "8:"
             "Folder" = "8:_732EC017B72740F9A6D4A79C884CFCE7"
             "Condition" = "8:"
@@ -429,10 +443,10 @@
             "IsDependency" = "11:FALSE"
             "IsolateTo" = "8:"
             }
-            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_6DE46926C8864B5FBC8882DFF240F312"
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_72B4F06516E549F09BEB78AA183FC4E7"
             {
-            "SourcePath" = "8:..\\PICkit2V2\\bin\\Release\\PK2DeviceFile.dat"
-            "TargetName" = "8:PK2DeviceFile.dat"
+            "SourcePath" = "8:..\\PICkit2V2\\bin\\Release\\PK3OSV023202.hex"
+            "TargetName" = "8:PK3OSV023202.hex"
             "Tag" = "8:"
             "Folder" = "8:_732EC017B72740F9A6D4A79C884CFCE7"
             "Condition" = "8:"
@@ -513,46 +527,6 @@
             {
             "SourcePath" = "8:..\\PICkit2V2\\Icon1.ico"
             "TargetName" = "8:Icon1.ico"
-            "Tag" = "8:"
-            "Folder" = "8:_732EC017B72740F9A6D4A79C884CFCE7"
-            "Condition" = "8:"
-            "Transitive" = "11:FALSE"
-            "Vital" = "11:TRUE"
-            "ReadOnly" = "11:FALSE"
-            "Hidden" = "11:FALSE"
-            "System" = "11:FALSE"
-            "Permanent" = "11:FALSE"
-            "SharedLegacy" = "11:FALSE"
-            "PackageAs" = "3:1"
-            "Register" = "3:1"
-            "Exclude" = "11:FALSE"
-            "IsDependency" = "11:FALSE"
-            "IsolateTo" = "8:"
-            }
-            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_BB152C9177254C26B0311239F151113A"
-            {
-            "SourcePath" = "8:..\\PICkit2V2\\bin\\Release\\PK3OSV022002.hex"
-            "TargetName" = "8:PK3OSV022002.hex"
-            "Tag" = "8:"
-            "Folder" = "8:_732EC017B72740F9A6D4A79C884CFCE7"
-            "Condition" = "8:"
-            "Transitive" = "11:FALSE"
-            "Vital" = "11:TRUE"
-            "ReadOnly" = "11:FALSE"
-            "Hidden" = "11:FALSE"
-            "System" = "11:FALSE"
-            "Permanent" = "11:FALSE"
-            "SharedLegacy" = "11:FALSE"
-            "PackageAs" = "3:1"
-            "Register" = "3:1"
-            "Exclude" = "11:FALSE"
-            "IsDependency" = "11:FALSE"
-            "IsolateTo" = "8:"
-            }
-            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_BB2BAEA51E004737944095A2749071C1"
-            {
-            "SourcePath" = "8:..\\PICkit2V2\\bin\\Release\\PK2MV023201.hex"
-            "TargetName" = "8:PK2MV023201.hex"
             "Tag" = "8:"
             "Folder" = "8:_732EC017B72740F9A6D4A79C884CFCE7"
             "Condition" = "8:"

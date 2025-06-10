@@ -724,6 +724,15 @@ using Pk3h = PICkit2V2.PK3Helpers;
 //          and PIC24FJ Gx 2/6xx
 // Bug Fix: Don't write unnecessary segment lines when exporting packed .hex file
 //          from device with big program flash.
+//
+// version 3.27.04 - 10 Jun 2025 JAKA
+// Feature: Support Auxiliary Flash operations as present in some PIC24 / dsPIC devices
+//          such as EP8 family.
+// Bug Fix: Fix logic tool not triggering/responding and PICkit3 P2GO not working.
+//          Were broken since 3.26.05.
+// Change:  Minimum PICkit firmware 2.32.02 as new script commands required by some
+//          PIC24/33 EP families
+
 
 
 
@@ -1963,6 +1972,16 @@ namespace PICkit2V2
 				VppFirstToolStripMenuItem.Enabled = false;
 			}
 
+			// Update menu for preserve aux flash menu item
+			if (Pk2.PartHasAuxFlash())
+			{
+				enableAuxiliaryFlashToolStripMenuItem.Enabled = true;
+			}
+            else
+            {
+				enableAuxiliaryFlashToolStripMenuItem.Enabled = false;
+			}
+
 			// Update menu for LVP program entry
 			if (Pk2.DevFile.PartsList[Pk2.ActivePart].LVPScript > 0)
 			{
@@ -2379,8 +2398,8 @@ namespace PICkit2V2
 			if (updateMemories && !multiWindow)
 			//if (updateMemories && !multiWindow && Pk2.DevFile.PartsList[Pk2.ActivePart].ProgramMem < 0x80000)
 			{
-				if (Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue > 0xFFFFFF)
-				{ // PIC32 - no ASCII view supported
+				if (Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue > 0xFFFFFF || Pk2.PartHasAuxFlash())
+				{ // PIC32 or part with Auxiliary Flash - no ASCII view supported
 					comboBoxProgMemView.SelectedIndex = 0;
 					comboBoxProgMemView.Enabled = false;
 				}
@@ -2467,7 +2486,7 @@ namespace PICkit2V2
 					}
 					rowAddressIncrement = addressIncrement * (dataColumns / 2);
 				}
-				if (Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue > 0xFFFFFF)
+				if (Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue > 0xFFFFFF || Pk2.PartHasAuxFlash())
 				{ // PIC32 - add rows for memory section titles
 					rowCount += 2;
 				}
@@ -2531,6 +2550,38 @@ namespace PICkit2V2
 						address += rowAddressIncrement;
 					}
 				}
+				if (Pk2.PartHasAuxFlash())
+				{ // PIC24/dsPIC with Auxiliary flash - insert titles
+					dataGridProgramMemory.ShowCellToolTips = false;
+					// Program Flash addresses
+					dataGridProgramMemory[0, 0].Value = "Program";
+					dataGridProgramMemory[1, 0].Value = "Flash";
+					for (int col = 0; col < dataGridProgramMemory.ColumnCount; col++)
+					{
+						dataGridProgramMemory[col, 0].Style.BackColor = System.Drawing.SystemColors.ControlDark;
+						dataGridProgramMemory[col, 0].ReadOnly = true;
+					}
+					for (int row = 1, address = 0; row <= progMemP32; row++)
+					{
+						dataGridProgramMemory[0, row].Value = string.Format(addressFormat, address);
+						dataGridProgramMemory[0, row].Style.BackColor = System.Drawing.SystemColors.ControlLight;
+						address += rowAddressIncrement;
+					}
+					// Aux Flash addresses
+					dataGridProgramMemory[0, progMemP32 + 1].Value = "Aux.";
+					dataGridProgramMemory[1, progMemP32 + 1].Value = "Flash";
+					for (int col = 0; col < dataGridProgramMemory.ColumnCount; col++)
+					{
+						dataGridProgramMemory[col, progMemP32 + 1].Style.BackColor = System.Drawing.SystemColors.ControlDark;
+						dataGridProgramMemory[col, progMemP32 + 1].ReadOnly = true;
+					}
+					for (int row = progMemP32 + 2, address = (int)Pk2.GetAuxFlashAddress() / addressIncrement; row < dataGridProgramMemory.RowCount; row++)
+					{
+						dataGridProgramMemory[0, row].Value = string.Format(addressFormat, address);
+						dataGridProgramMemory[0, row].Style.BackColor = System.Drawing.SystemColors.ControlLight;
+						address += rowAddressIncrement;
+					}
+				}
 				else
 				{
 					dataGridProgramMemory.ShowCellToolTips = true;
@@ -2564,7 +2615,7 @@ namespace PICkit2V2
 					dataFormat = "{0:X8}";
 					asciiBytes = 4;
 				}
-				if (Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue > 0xFFFFFF)
+				if (Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue > 0xFFFFFF || Pk2.PartHasAuxFlash())
 				{ // PIC32
 				  // Program Flash
 					int idx = 0;
@@ -2614,7 +2665,7 @@ namespace PICkit2V2
 				{
 					lastcol = hexColumns;
 				}
-				if (Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue > 0xFFFFFF)
+				if (Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue > 0xFFFFFF || Pk2.PartHasAuxFlash())
 				{ // PIC32
 				  // "last row" not used for PIC32
 				}
@@ -3294,6 +3345,10 @@ namespace PICkit2V2
 					Pk2.DeviceBuffers.ClearUserIDs(Pk2.DevFile.Families[Pk2.GetActiveFamily()].UserIDBytes,
 													Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue);
 				}
+				if (enableAuxiliaryFlashToolStripMenuItem.Checked)
+                {
+					Pk2.DeviceBuffers.ClearAuxMemory(Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue);
+                }
 				if (checkBoxEEMem.Checked)
 				{
 					Pk2.DeviceBuffers.ClearEEPromMemory(Pk2.DevFile.Families[Pk2.GetActiveFamily()].EEMemAddressIncrement,
@@ -3320,7 +3375,7 @@ namespace PICkit2V2
 					displayStatusWindow.Text = fileType + " file successfully imported.";
 					if (!checkBoxEEMem.Checked && checkBoxEEEnaShadow)
 					{
-						displayStatusWindow.Text += "\nEEPROM data no imported.";
+						displayStatusWindow.Text += "\nEEPROM data not imported.";
 					}
 					if (!checkBoxProgMemEnabled.Checked)
 					{
@@ -3757,8 +3812,19 @@ namespace PICkit2V2
 					int wordsPerLoop = scriptRunsToFillUpload * Pk2.DevFile.PartsList[Pk2.ActivePart].ProgMemRdWords;
 					int wordsRead = 0;
 
+					int endOfBuffer = (int)Pk2.DevFile.PartsList[Pk2.ActivePart].ProgramMem;
+					
+					if (Pk2.PartHasAuxFlash() && !enableAuxiliaryFlashToolStripMenuItem.Checked)
+					{   // Don't read Aux flash if not enabled
+						int lastUserProgLocation = (int)Pk2.DevFile.PartsList[Pk2.ActivePart].ProgramMem
+												   - (int)Pk2.DevFile.PartsList[Pk2.ActivePart].BootFlash
+												   - 1;
+						if (endOfBuffer > lastUserProgLocation)
+							endOfBuffer = lastUserProgLocation;
+					}
+
 					progressBar1.Value = 0;     // reset bar
-					progressBar1.Maximum = (int)Pk2.DevFile.PartsList[Pk2.ActivePart].ProgramMem / wordsPerLoop;
+					progressBar1.Maximum = endOfBuffer / wordsPerLoop;
 
 					do
 					{
@@ -3826,6 +3892,17 @@ namespace PICkit2V2
 							{
 								break; // for cases where ProgramMemSize%WordsPerLoop != 0
 							}
+							if (Pk2.PartHasAuxFlash() && enableAuxiliaryFlashToolStripMenuItem.Checked == true)
+							{
+								if (wordsRead == (Pk2.DevFile.PartsList[Pk2.ActivePart].ProgramMem
+												 - Pk2.DevFile.PartsList[Pk2.ActivePart].BootFlash))
+								{
+									Pk2.DownloadAddress3((int)Pk2.GetAuxFlashAddress()/2);
+									Pk2.RunScript(KONST.PROGMEM_ADDRSET, 1);
+									displayStatusWindow.Text += "Aux... ";
+									break;
+								}
+							}
 							if (((wordsRead % 0x8000) == 0)
 									&& (Pk2.DevFile.PartsList[Pk2.ActivePart].ProgMemAddrSetScript != 0)
 									&& (Pk2.DevFile.PartsList[Pk2.ActivePart].ProgMemAddrBytes != 0)
@@ -3837,7 +3914,7 @@ namespace PICkit2V2
 							}
 						}
 						progressBar1.PerformStep();
-					} while (wordsRead < Pk2.DevFile.PartsList[Pk2.ActivePart].ProgramMem && !stopOperation);
+					} while (wordsRead < endOfBuffer && !stopOperation);
 
 					Pk2.RunScript(KONST.PROG_EXIT, 1);
 
@@ -4653,7 +4730,9 @@ namespace PICkit2V2
 			// Erase Device First
 			bool reWriteEE = false;
 			//if (checkBoxProgMemEnabled.Checked && (checkBoxEEMem.Checked || !checkBoxEEMem.Enabled) && !stopOperation)
-			if (checkBoxProgMemEnabled.Checked && (checkBoxEEMem.Checked || !checkBoxEEEnaShadow) && !stopOperation)
+			if (((!Pk2.PartHasAuxFlash() && checkBoxProgMemEnabled.Checked && (checkBoxEEMem.Checked || !checkBoxEEEnaShadow))
+				|| (Pk2.PartHasAuxFlash() && enableAuxiliaryFlashToolStripMenuItem.Checked))
+				&& !stopOperation)
 			{ // chip erase when programming all
 				if (useLowVoltageRowErase)
 				{ // use row erases
@@ -4855,6 +4934,15 @@ namespace PICkit2V2
 				// Find end of used memory
 				endOfBuffer = Pk2.FindLastUsedInBuffer(Pk2.DeviceBuffers.ProgramMemory,
 											Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue, endOfBuffer);
+				
+				int firstAuxFlashLocation = (int)Pk2.DevFile.PartsList[Pk2.ActivePart].ProgramMem
+											- (int)Pk2.DevFile.PartsList[Pk2.ActivePart].BootFlash;
+				if (Pk2.PartHasAuxFlash() && !enableAuxiliaryFlashToolStripMenuItem.Checked)
+				{   // Check if Auxiliary flash not enabled, but buffer contains aux flash data
+					if (endOfBuffer >= firstAuxFlashLocation)
+						endOfBuffer = firstAuxFlashLocation - 1;
+				}
+
 				if (((wordsPerWrite == (endOfBuffer + 1)) || (wordsPerLoop > (endOfBuffer + 1))) && !Pk2.LearnMode)
 				{ // very small memory sizes (like HCS parts)
 					scriptRunsToUseDownload = 1;
@@ -4895,6 +4983,8 @@ namespace PICkit2V2
 					byte[] downloadBuffer = new byte[KONST.DownLoadBufferSize];
 					bool wholeChunkIsBlank = true;
 					bool previousChunkWasBlank = true;
+					bool auxFlashAddressWritten = false;
+					//bool auxFlashAddressJustWritten = false;
 
 					do
 					{
@@ -4944,7 +5034,12 @@ namespace PICkit2V2
 							{ // if prog mem address set script exists for this part
 								if (previousChunkWasBlank)
 								{   // set PC if previous chunk was not written
-									Pk2.DownloadAddress3((wordsWritten - wordsPerLoop) * Pk2.DevFile.Families[Pk2.GetActiveFamily()].AddressIncrement);
+									if (auxFlashAddressWritten)
+                                    {
+										Pk2.DownloadAddress3((wordsWritten - firstAuxFlashLocation + ((int)Pk2.GetAuxFlashAddress() / 4) - wordsPerLoop) * Pk2.DevFile.Families[Pk2.GetActiveFamily()].AddressIncrement);
+									}
+									else
+										Pk2.DownloadAddress3((wordsWritten - wordsPerLoop) * Pk2.DevFile.Families[Pk2.GetActiveFamily()].AddressIncrement);
 									if (Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue == 0xFFFFFF)
 										Pk2.RunScript(KONST.PROGMEM_WR_PREP, 1);    // PIC24 (maybe others?) need to use WR_PREP when writing, and ADDRSET when reading 
 									else
@@ -4965,15 +5060,26 @@ namespace PICkit2V2
 							Pk2.RunScript(KONST.PROGMEM_WR, scriptRunsToUseDownload);
 						}
 
-						//if (Pk2.DevFile.Families[Pk2.GetActiveFamily()].FamilyName != "PIC18/PIC18F MSB1st")    // JAKA - do not re-write write prep script for PIC18F with large memory - it fails.
-						//{                                                                                       // It is actually 'set address to 0' -script for 18F Q series PICs
-						if (((wordsWritten % 0x8000) == 0) && (Pk2.DevFile.PartsList[Pk2.ActivePart].ProgMemWrPrepScript != 0))
+						if (Pk2.PartHasAuxFlash()
+							&& enableAuxiliaryFlashToolStripMenuItem.Checked == true
+							&& auxFlashAddressWritten == false)
+						{
+							if (wordsWritten >= firstAuxFlashLocation)
+							{
+								wordsWritten = firstAuxFlashLocation;
+								Pk2.DownloadAddress3((int)Pk2.GetAuxFlashAddress() / 2);
+								Pk2.RunScript(KONST.PROGMEM_WR_PREP, 1);
+								auxFlashAddressWritten = true;
+								// auxFlashAddressJustWritten = true;
+								displayStatusWindow.Text += "Aux... ";
+							}
+						}
+						if (((wordsWritten % 0x8000) == 0) && (Pk2.DevFile.PartsList[Pk2.ActivePart].ProgMemWrPrepScript != 0) && auxFlashAddressWritten == false)
 						{ //PIC24 must update TBLPAG
 							Pk2.DownloadAddress3(0x10000 * (wordsWritten / 0x8000));
 							Pk2.RunScript(KONST.PROGMEM_WR_PREP, 1);
 						}
-						//}
-
+						
 						previousChunkWasBlank = wholeChunkIsBlank;
 						progressBar1.PerformStep();
 					} while (wordsWritten < endOfBuffer && !stopOperation);
@@ -5248,8 +5354,8 @@ namespace PICkit2V2
 
 				}
 
-				// download data, only if it's not all blank. Also don't write OTP if already written.
-				if (!uIDIsBlank && !OTPAlreadyWritten && !stopOperation)
+				// if OTP, download data, only if it's not all blank. Also don't write OTP if already written.
+				if (((!Pk2.PartHasCustomerOTP()) || (!uIDIsBlank && !OTPAlreadyWritten)) && !stopOperation)
 				{
 					int maxDownloadIndex = downloadIndex;
 					int wordsPerWrite = Pk2.DevFile.PartsList[Pk2.ActivePart].ProgMemWrWords;
@@ -5720,6 +5826,7 @@ namespace PICkit2V2
 			}
 
 			DeviceData blankDevice = new DeviceData(Pk2.DevFile.PartsList[Pk2.ActivePart].ProgramMem,
+				Pk2.DevFile.PartsList[Pk2.ActivePart].BootFlash,
 				Pk2.DevFile.PartsList[Pk2.ActivePart].EEMem,
 				Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigWords,
 				Pk2.DevFile.PartsList[Pk2.ActivePart].UserIDWords,
@@ -5777,7 +5884,11 @@ namespace PICkit2V2
 			displayStatusWindow.Text += "Program Memory... ";
 			//displayStatusWindow.Update();
 			this.Update();
-
+			
+			// We always blank check aux flash if device has such
+			int firstAuxFlashLocation = (int)Pk2.DevFile.PartsList[Pk2.ActivePart].ProgramMem
+								- (int)Pk2.DevFile.PartsList[Pk2.ActivePart].BootFlash;
+			
 			if (useProgExec33())
 			{
 				if (!PE33.PE33BlankCheck(displayStatusWindow.Text))
@@ -5827,6 +5938,7 @@ namespace PICkit2V2
 					(Pk2.DevFile.PartsList[Pk2.ActivePart].ProgMemRdWords * bytesPerWord);
 				int wordsPerLoop = scriptRunsToFillUpload * Pk2.DevFile.PartsList[Pk2.ActivePart].ProgMemRdWords;
 				int wordsRead = 0;
+				bool auxFlashAddressWritten = false;
 
 				progressBar1.Value = 0;     // reset bar
 				progressBar1.Maximum = (int)Pk2.DevFile.PartsList[Pk2.ActivePart].ProgramMem / wordsPerLoop;
@@ -5910,8 +6022,17 @@ namespace PICkit2V2
 							{
 								displayStatusWindow.Text = "Program Memory is not blank starting at address\n";
 							}
-							displayStatusWindow.Text += string.Format("0x{0:X6}",
-								(--wordsRead * Pk2.DevFile.Families[Pk2.GetActiveFamily()].AddressIncrement));
+							int failingAddress = --wordsRead * Pk2.DevFile.Families[Pk2.GetActiveFamily()].AddressIncrement;
+							if (Pk2.PartHasAuxFlash()
+								&& (wordsRead >= firstAuxFlashLocation))
+							{   // Verify fail is at Auxiliary Flash area
+								failingAddress = (((int)Pk2.GetAuxFlashAddress()
+													/ Pk2.DevFile.Families[Pk2.GetActiveFamily()].ProgMemHexBytes)
+													+ wordsRead
+													- firstAuxFlashLocation)
+													* Pk2.DevFile.Families[Pk2.GetActiveFamily()].AddressIncrement;
+							}
+							displayStatusWindow.Text += string.Format("0x{0:X6}", failingAddress);
 							statusWindowColor = Constants.StatusColor.red;
 							updateGUI(KONST.UpdateMemoryDisplays, KONST.DontEnableMclrCheckBox, KONST.DontUpdateProtections);
 							return false;
@@ -5921,10 +6042,25 @@ namespace PICkit2V2
 						{
 							break; // for cases where ProgramMemSize%WordsPerLoop != 0
 						}
+
+						if (Pk2.PartHasAuxFlash()
+							&& auxFlashAddressWritten == false)
+						{
+							if (wordsRead >= firstAuxFlashLocation)
+							{
+								wordsRead = firstAuxFlashLocation;
+								Pk2.DownloadAddress3((int)Pk2.GetAuxFlashAddress() / 2);
+								Pk2.RunScript(KONST.PROGMEM_ADDRSET, 1);
+								auxFlashAddressWritten = true;
+								displayStatusWindow.Text += "Aux... ";
+							}
+						}
+
 						if (((wordsRead % 0x8000) == 0)
 								&& (Pk2.DevFile.PartsList[Pk2.ActivePart].ProgMemAddrSetScript != 0)
 								&& (Pk2.DevFile.PartsList[Pk2.ActivePart].ProgMemAddrBytes != 0)
-								&& (Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue > 0xFFFF))
+								&& (Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue > 0xFFFF)
+								&& auxFlashAddressWritten == false)
 						{ //PIC24 must update TBLPAG
 							Pk2.DownloadAddress3(0x10000 * (wordsRead / 0x8000));
 							Pk2.RunScript(KONST.PROGMEM_ADDRSET, 1);
@@ -6252,6 +6388,20 @@ namespace PICkit2V2
 					index -= numColumns; // subtract row with "Boot Flash" text  
 				}
 			}
+			
+			if (Pk2.PartHasAuxFlash())
+			{
+				int progMemP32 = (int)Pk2.DevFile.PartsList[Pk2.ActivePart].ProgramMem;
+				int bootMemP32 = (int)Pk2.DevFile.PartsList[Pk2.ActivePart].BootFlash;
+				progMemP32 -= bootMemP32; // boot flash at upper end of prog mem.
+
+				index -= numColumns; // first row has "Program Flash" text
+
+				if (index > progMemP32)
+				{
+					index -= numColumns; // subtract row with "Boot Flash" text  
+				}
+			}
 
 			Pk2.DeviceBuffers.ProgramMemory[index] =
 						(uint)(value & Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue);
@@ -6449,6 +6599,14 @@ namespace PICkit2V2
 				endOfBuffer = lastLocation;
 			}
 
+			int firstAuxFlashLocation = (int)Pk2.DevFile.PartsList[Pk2.ActivePart].ProgramMem
+											- (int)Pk2.DevFile.PartsList[Pk2.ActivePart].BootFlash;
+			if (Pk2.PartHasAuxFlash() && !enableAuxiliaryFlashToolStripMenuItem.Checked)
+			{   // If Auxiliary flash not enabled, don't verify it
+				if (endOfBuffer >= firstAuxFlashLocation)
+					endOfBuffer = firstAuxFlashLocation - 1;
+			}
+
 			//Verify Program Memory ----------------------------------------------------------------------------
 			if (checkBoxProgMemEnabled.Checked && !stopOperation)
 			{
@@ -6528,6 +6686,7 @@ namespace PICkit2V2
 
 					bool wholeChunkIsBlank = true;
 					bool previousChunkWasBlank = false;
+					bool auxFlashAddressWritten = false;
 
 					if (Pk2.DevFile.PartsList[Pk2.ActivePart].ProgMemRdWords == (endOfBuffer + 1))
 					{ // very small memory sizes (like HCS parts)
@@ -6592,7 +6751,10 @@ namespace PICkit2V2
 									}
 									else
 									{
-										Pk2.DownloadAddress3(wordsRead * Pk2.DevFile.Families[Pk2.GetActiveFamily()].AddressIncrement);
+										if (auxFlashAddressWritten)
+											Pk2.DownloadAddress3((wordsRead - firstAuxFlashLocation + ((int)Pk2.GetAuxFlashAddress() / 4)) * Pk2.DevFile.Families[Pk2.GetActiveFamily()].AddressIncrement);
+										else
+											Pk2.DownloadAddress3(wordsRead * Pk2.DevFile.Families[Pk2.GetActiveFamily()].AddressIncrement);
 										Pk2.RunScript(KONST.PROGMEM_ADDRSET, 1);
 									}
 								}
@@ -6692,13 +6854,22 @@ namespace PICkit2V2
 											displayStatusWindow.Text = "Programming failed at Program Memory address\n";
 										}
 									}
-									displayStatusWindow.Text += string.Format("0x{0:X6}",
-										(--wordsRead * Pk2.DevFile.Families[Pk2.GetActiveFamily()].AddressIncrement));
+									int failingAddress = --wordsRead * Pk2.DevFile.Families[Pk2.GetActiveFamily()].AddressIncrement;
+									if (Pk2.PartHasAuxFlash()
+										&& (wordsRead >= firstAuxFlashLocation))
+                                    {	// Verify fail is at Auxiliary Flash area
+										failingAddress = (((int)Pk2.GetAuxFlashAddress()
+															/ Pk2.DevFile.Families[Pk2.GetActiveFamily()].ProgMemHexBytes)
+															+ wordsRead
+															- firstAuxFlashLocation)
+															* Pk2.DevFile.Families[Pk2.GetActiveFamily()].AddressIncrement;
+									}
+									displayStatusWindow.Text += string.Format("0x{0:X6}", failingAddress);
 									statusWindowColor = Constants.StatusColor.red;
 									updateGUI(KONST.UpdateMemoryDisplays, KONST.EnableMclrCheckBox, KONST.DontUpdateProtections);
 									return false;
 								}
-
+								
 								// It is probably OK that the two checks below are made only when data is verified.
 								// The TBLPAG gets anyway updated if there was blank data at  % 0x8000, since
 								// there is address_set after blank block. Also, if last block is empty, it
@@ -6706,7 +6877,8 @@ namespace PICkit2V2
 								if (((wordsRead % 0x8000) == 0)
 									&& (Pk2.DevFile.PartsList[Pk2.ActivePart].ProgMemAddrSetScript != 0)
 									&& (Pk2.DevFile.PartsList[Pk2.ActivePart].ProgMemAddrBytes != 0)
-									&& (Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue > 0xFFFF))
+									&& (Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue > 0xFFFF)
+									&& auxFlashAddressWritten == false)
 								{ //PIC24 must update TBLPAG
 									Pk2.DownloadAddress3(0x10000 * (wordsRead / 0x8000));
 									Pk2.RunScript(KONST.PROGMEM_ADDRSET, 1);
@@ -6723,6 +6895,21 @@ namespace PICkit2V2
 						{   // increment wordsRead the correct amount
 							wordsRead += wordsPerLoop;
 						}
+
+						if (Pk2.PartHasAuxFlash()
+							&& enableAuxiliaryFlashToolStripMenuItem.Checked == true
+							&& auxFlashAddressWritten == false)
+						{
+							if (wordsRead >= firstAuxFlashLocation)
+							{
+								wordsRead = firstAuxFlashLocation;
+								Pk2.DownloadAddress3((int)Pk2.GetAuxFlashAddress() / 2);
+								Pk2.RunScript(KONST.PROGMEM_ADDRSET, 1);
+								auxFlashAddressWritten = true;
+								displayStatusWindow.Text += "Aux... ";
+							}
+						}
+
 						previousChunkWasBlank = wholeChunkIsBlank;
 
 
@@ -7862,6 +8049,14 @@ namespace PICkit2V2
 			}
 			hexFile.WriteLine("VRFW: " + value);
 
+			// enable auxiliary flash
+			value = "N";
+			if (enableAuxiliaryFlashToolStripMenuItem.Checked)
+			{
+				value = "Y";
+			}
+			hexFile.WriteLine("EAFM: " + value);
+
 			// program on pickit button state
 			value = "N";
 			if (writeOnPICkitButtonToolStripMenuItem.Checked)
@@ -8336,6 +8531,13 @@ namespace PICkit2V2
 								if (string.Compare(fileLine.Substring(6, 1), "N") == 0)
 								{
 									verifyOnWriteToolStripMenuItem.Checked = false;
+								}
+								break;
+
+							case "EAFM:":
+								if (string.Compare(fileLine.Substring(6, 1), "N") == 0)
+								{
+									enableAuxiliaryFlashToolStripMenuItem.Checked = false;
 								}
 								break;
 
@@ -10982,8 +11184,22 @@ namespace PICkit2V2
 				displayStatusWindow.Text += "always process the whole program memory.";
 			}
 		}
+		private void enableAuxAction(object sender, EventArgs e)
+		{
+			displayStatusWindow.BackColor = System.Drawing.SystemColors.Info;
+			if (enableAuxiliaryFlashToolStripMenuItem.Checked)
+			{
+				displayStatusWindow.Text = "Auxiliary Flash enabled - Write , Read and\n";
+				displayStatusWindow.Text += "verify commands process also Aux Flash.";
+			}
+			else
+			{
+				displayStatusWindow.Text = "Auxiliary Flash disabled - Write, Read and\n";
+				displayStatusWindow.Text += "verify omit Aux Flash memory.";
+			}
+		}
 
-        private void autoSearchOnStartToolStripMenuItem_Click(object sender, EventArgs e)
+		private void autoSearchOnStartToolStripMenuItem_Click(object sender, EventArgs e)
         {
 			displayStatusWindow.BackColor = System.Drawing.SystemColors.Info;
 			if (autoSearchOnStartToolStripMenuItem.Checked)

@@ -61,6 +61,11 @@ namespace PICkit2V2
                 uint programMemStart = 0;
                 uint bootMemStart = 0;
                 uint bootMemSize = Pk2.DevFile.PartsList[Pk2.ActivePart].BootFlash;
+                if (Pk2.PartHasAuxFlash())
+                {
+                    bootMemStart = Pk2.GetAuxFlashAddress();
+                    progMemSizeBytes -= (int)bootMemSize * bytesPerWord;
+                }
                 if (Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue > 0xFFFFFF)
                 { // PIC32
                     programMemStart = Constants.P32_PROGRAM_FLASH_START_ADDR;
@@ -435,6 +440,12 @@ namespace PICkit2V2
                 fileAddress = (int)(Constants.P32_PROGRAM_FLASH_START_ADDR & 0xFFFF);
                 programEnd -= (int)Pk2.DevFile.PartsList[Pk2.ActivePart].BootFlash;
             }
+
+            if (Pk2.PartHasAuxFlash())
+            {
+                programEnd -= (int)Pk2.DevFile.PartsList[Pk2.ActivePart].BootFlash;
+            }
+            
             int arrayIndex = 0;
             int bytesPerWord = Pk2.DevFile.Families[Pk2.GetActiveFamily()].ProgMemHexBytes;
             int arrayIncrement = 16 / bytesPerWord;     // # array words per hex line.
@@ -513,45 +524,95 @@ namespace PICkit2V2
                 
                 } while (arrayIndex < programEnd);
             }
-            // Boot Memory ----------------------------------------------------------------------------
-            if ((Pk2.DevFile.PartsList[Pk2.ActivePart].BootFlash > 0) && Pk2.FamilyIsPIC32())
+            // Boot Memory / Aux memory ----------------------------------------------------------------------
+            if ((Pk2.DevFile.PartsList[Pk2.ActivePart].BootFlash > 0) && (Pk2.FamilyIsPIC32() || Pk2.PartHasAuxFlash()))
             {
-                hexFile.WriteLine(":020000041FC01B");
+                if (Pk2.FamilyIsPIC32())
+                {
+                    hexFile.WriteLine(":020000041FC01B");
+                    fileSegment = (int)(Constants.P32_BOOT_FLASH_START_ADDR >> 16);
+                    fileAddress = (int)(Constants.P32_BOOT_FLASH_START_ADDR & 0xFFFF);
+                }
+                else if (Pk2.PartHasAuxFlash())
+                {
+                    fileSegment = (int)(Pk2.GetAuxFlashAddress() >> 16);
+                    fileAddress = (int)(Pk2.GetAuxFlashAddress() & 0xFFFF);
+                    string segmentLine = string.Format(":02000004{0:X4}", fileSegment);
+                    segmentLine += string.Format("{0:X2}", computeChecksum(segmentLine));
+                    hexFile.WriteLine(segmentLine);
+                }
                 arrayIndex = programEnd;
                 programEnd = Pk2.DeviceBuffers.ProgramMemory.Length;          
-                fileSegment = (int)(Constants.P32_BOOT_FLASH_START_ADDR >> 16);
-                fileAddress = (int)(Constants.P32_BOOT_FLASH_START_ADDR & 0xFFFF);
                 if (progMem)
                 {
+                    string segmentLine = "";
+                    bool pendingSegmentLine = false;
                     do
                     {
-                        string hexLine = string.Format(":10{0:X4}00", fileAddress);
-                        for (int i = 0; i < arrayIncrement; i++)
+                        numBlanks = 0;
+                        if (packed)
                         {
-                            // convert entire array word to hex string of 4 bytes.
-                            string hexWord = string.Format("{0:X8}", Pk2.DeviceBuffers.ProgramMemory[arrayIndex + i]);
-                            for (int j = 0; j < bytesPerWord; j++)
+                            for (int i = arrayIncrement - 1; i >= 0; i--)
                             {
-                                hexLine += hexWord.Substring((6 - 2 * j), 2);
+                                // check if the line has data or blanks
+                                if (Pk2.DeviceBuffers.ProgramMemory[arrayIndex + i] == blankValue)
+                                {
+                                    numBlanks++;
+                                }
+                                else
+                                {
+                                    if (pendingSegmentLine)     // Write the segmentLine only if segment contains data
+                                    {
+                                        hexFile.WriteLine(segmentLine);
+                                        pendingSegmentLine = false;
+                                    }
+                                    break;
+                                }
+
                             }
                         }
-                        hexLine += string.Format("{0:X2}", computeChecksum(hexLine));
-                        hexFile.WriteLine(hexLine);
                         
+                        numValidBytes = 16 - numBlanks * bytesPerWord;
+                        if (numValidBytes > 0)
+                        {
+                            string hexLine = string.Format(":{0:X2}{1:X4}00", numValidBytes, fileAddress);
+                            for (int i = 0; i < (arrayIncrement - numBlanks); i++)
+                            {
+                                // convert entire array word to hex string of 4 bytes.
+                                string hexWord = "00000000";
+                                if ((arrayIndex + i) < Pk2.DeviceBuffers.ProgramMemory.Length)
+                                {
+                                    hexWord = string.Format("{0:X8}", Pk2.DeviceBuffers.ProgramMemory[arrayIndex + i]);
+                                }
+                                for (int j = 0; j < bytesPerWord; j++)
+                                {
+                                    hexLine += hexWord.Substring((6 - 2 * j), 2);
+                                }
+                            }
+                            hexLine += string.Format("{0:X2}", computeChecksum(hexLine));
+                            hexFile.WriteLine(hexLine);
+                        }
+
+
                         fileAddress += 16;
                         arrayIndex += arrayIncrement;
-                        
+
                         // check for segment boundary
                         if ((fileAddress > 0xFFFF) && (arrayIndex < Pk2.DeviceBuffers.ProgramMemory.Length))
                         {
                             fileSegment += fileAddress >> 16;
                             fileAddress &= 0xFFFF;
-                            string segmentLine = string.Format(":02000004{0:X4}", fileSegment);
+                            segmentLine = string.Format(":02000004{0:X4}", fileSegment);
                             segmentLine += string.Format("{0:X2}", computeChecksum(segmentLine));
-                            hexFile.WriteLine(segmentLine); 
-                                              
+                            if (packed)
+                            {
+                                pendingSegmentLine = true;
+                            }
+                            else
+                            {
+                                hexFile.WriteLine(segmentLine);     // Always write the segmentLine if not packed
+                            }
                         }
-
                     } while (arrayIndex < programEnd);
                 }   
             }         

@@ -84,8 +84,8 @@ namespace PICkit2V2
         
             // first, calculate the address column size
             uint blankValue = Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue;
-            // ASCII display disabled for PIC32
-            if (blankValue == 0xFFFFFFFF)
+            // ASCII display disabled for PIC32 and parts with aux flash
+            if (blankValue == 0xFFFFFFFF || Pk2.PartHasAuxFlash())
             {
                 comboBoxProgMemView.SelectedIndex = 0;
                 comboBoxProgMemView.Enabled = false;
@@ -101,6 +101,11 @@ namespace PICkit2V2
             {// PIC32
                 addrColWidth = 65; 
                 addrFormat = "{0:X8}";
+            }
+            else if (Pk2.PartHasAuxFlash())
+            {
+                addrColWidth = 56; // FFFFFF max (and word 'Program' fits)
+                addrFormat = "{0:X6}";
             }
             else if (maxAddr > 0xFFFF)
             {
@@ -207,7 +212,7 @@ namespace PICkit2V2
             { // mem size not an even divider, need an extra row
                 numRows++;
             }
-            if (blankValue == 0xFFFFFFFF)
+            if (blankValue == 0xFFFFFFFF || Pk2.PartHasAuxFlash())
             {
                 numRows+= 2;
             }
@@ -248,7 +253,43 @@ namespace PICkit2V2
                     dataGridProgramMemory[0, row].Value = string.Format(addrFormat, address);
                     dataGridProgramMemory[0, row].Style.BackColor = System.Drawing.SystemColors.ControlLight;
                     address += rowAddrIncrement;
-                }                 
+                }
+            }
+            else if (Pk2.PartHasAuxFlash())
+            {// PIC24/dsPIC33 with auxiliary flash
+                int progMemP32 = (int)Pk2.DevFile.PartsList[Pk2.ActivePart].ProgramMem;
+                int bootMemP32 = (int)Pk2.DevFile.PartsList[Pk2.ActivePart].BootFlash;
+                progMemP32 -= bootMemP32; // boot flash at upper end of prog mem.
+                progMemP32 /= maxCols;
+                dataGridProgramMemory.ShowCellToolTips = false;
+                // Program Flash addresses
+                dataGridProgramMemory[0, 0].Value = "Program";
+                dataGridProgramMemory[1, 0].Value = "Flash";
+                for (int col = 0; col < dataGridProgramMemory.ColumnCount; col++)
+                {
+                    dataGridProgramMemory[col, 0].Style.BackColor = System.Drawing.SystemColors.ControlDark;
+                    dataGridProgramMemory[col, 0].ReadOnly = true;
+                }
+                for (int row = 1, address = 0; row <= progMemP32; row++)
+                {
+                    dataGridProgramMemory[0, row].Value = string.Format(addrFormat, address);
+                    dataGridProgramMemory[0, row].Style.BackColor = System.Drawing.SystemColors.ControlLight;
+                    address += rowAddrIncrement;
+                }
+                // Boot Flash addresses
+                dataGridProgramMemory[0, progMemP32 + 1].Value = "Aux.";
+                dataGridProgramMemory[1, progMemP32 + 1].Value = "Flash";
+                for (int col = 0; col < dataGridProgramMemory.ColumnCount; col++)
+                {
+                    dataGridProgramMemory[col, progMemP32 + 1].Style.BackColor = System.Drawing.SystemColors.ControlDark;
+                    dataGridProgramMemory[col, progMemP32 + 1].ReadOnly = true;
+                }
+                for (int row = progMemP32 + 2, address = (int)Pk2.GetAuxFlashAddress() / (int)Pk2.DevFile.Families[Pk2.GetActiveFamily()].AddressIncrement; row < dataGridProgramMemory.RowCount; row++)
+                {
+                    dataGridProgramMemory[0, row].Value = string.Format(addrFormat, address);
+                    dataGridProgramMemory[0, row].Style.BackColor = System.Drawing.SystemColors.ControlLight;
+                    address += rowAddrIncrement;
+                }
             }
             else
             {
@@ -303,7 +344,7 @@ namespace PICkit2V2
             if (lastCol == 0)
                 lastCol = numCols;
             int rowidx = numRows * numCols;                
-            if (blankValue == 0xFFFFFFFF)
+            if (blankValue == 0xFFFFFFFF || Pk2.PartHasAuxFlash())
             {
                 // Program Flash
                 int idx = 0;
@@ -480,7 +521,7 @@ namespace PICkit2V2
             
             int index = ((row * numColumns) + col - 1);
             
-            if (Pk2.FamilyIsPIC32())
+            if (Pk2.FamilyIsPIC32() || Pk2.PartHasAuxFlash())
             {
                 int progMemP32 = (int)Pk2.DevFile.PartsList[Pk2.ActivePart].ProgramMem;
                 int bootMemP32 = (int)Pk2.DevFile.PartsList[Pk2.ActivePart].BootFlash;

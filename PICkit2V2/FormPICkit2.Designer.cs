@@ -56,6 +56,7 @@ namespace PICkit2V2
             this.toolStripMenuItem4 = new System.Windows.Forms.ToolStripSeparator();
             this.verifyOnWriteToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItemClearBuffersErase = new System.Windows.Forms.ToolStripMenuItem();
+            this.enableAuxiliaryFlashToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.MCLRtoolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItemSounds = new System.Windows.Forms.ToolStripMenuItem();
             this.writeOnPICkitButtonToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -175,9 +176,6 @@ namespace PICkit2V2
             this.checkBoxProgMemEnabledAlt = new System.Windows.Forms.CheckBox();
             this.checkBoxEEDATAMemoryEnabledAlt = new System.Windows.Forms.CheckBox();
             this.timerInitalUpdate = new System.Windows.Forms.Timer(this.components);
-            //this.openFWFilePk3 = new System.Windows.Forms.OpenFileDialog();
-            //this.openFWFilePkob = new System.Windows.Forms.OpenFileDialog();
-            //this.openFWFilePK2M = new System.Windows.Forms.OpenFileDialog();
             this.timerInitHW = new System.Windows.Forms.Timer(this.components);
             this.menuStrip1.SuspendLayout();
             this.statusGroupBox.SuspendLayout();
@@ -318,6 +316,7 @@ namespace PICkit2V2
             this.toolStripMenuItem4,
             this.verifyOnWriteToolStripMenuItem,
             this.toolStripMenuItemClearBuffersErase,
+            this.enableAuxiliaryFlashToolStripMenuItem,
             this.MCLRtoolStripMenuItem,
             this.toolStripMenuItemSounds,
             this.writeOnPICkitButtonToolStripMenuItem,
@@ -394,6 +393,16 @@ namespace PICkit2V2
             this.toolStripMenuItemClearBuffersErase.Name = "toolStripMenuItemClearBuffersErase";
             this.toolStripMenuItemClearBuffersErase.Size = new System.Drawing.Size(236, 22);
             this.toolStripMenuItemClearBuffersErase.Text = "Clear Memory Buffers on Erase";
+            // 
+            // enableAuxiliaryFlashToolStripMenuItem
+            // 
+            this.enableAuxiliaryFlashToolStripMenuItem.Checked = true;
+            this.enableAuxiliaryFlashToolStripMenuItem.CheckOnClick = true;
+            this.enableAuxiliaryFlashToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.enableAuxiliaryFlashToolStripMenuItem.Name = "enableAuxiliaryFlashToolStripMenuItem";
+            this.enableAuxiliaryFlashToolStripMenuItem.Size = new System.Drawing.Size(236, 22);
+            this.enableAuxiliaryFlashToolStripMenuItem.Text = "Enable Auxiliary Flash";
+            this.enableAuxiliaryFlashToolStripMenuItem.Click += new System.EventHandler(this.enableAuxAction);
             // 
             // MCLRtoolStripMenuItem
             // 
@@ -1689,28 +1698,6 @@ namespace PICkit2V2
             // 
             this.timerInitalUpdate.Interval = 1;
             this.timerInitalUpdate.Tick += new System.EventHandler(this.timerInitalUpdate_Tick);
-            /*// 
-            // openFWFilePk3
-            // 
-            this.openFWFilePk3.DefaultExt = "hex";
-            this.openFWFilePk3.Filter = "PICkit 3 OS|pk3os*.hex|All files|*.*";
-            this.openFWFilePk3.InitialDirectory = ".";
-            this.openFWFilePk3.Title = "Open PICkit 3 Operating System File";
-            // 
-            // openFWFilePkob
-            // 
-            this.openFWFilePkob.DefaultExt = "hex";
-            this.openFWFilePkob.Filter = "PKOB OS|pk3os*.hex|All files|*.*";
-            this.openFWFilePkob.InitialDirectory = ".";
-            this.openFWFilePkob.Title = "Open PKOB Operating System File";
-            // 
-            // openFWFilePK2M
-            // 
-            this.openFWFilePK2M.DefaultExt = "hex";
-            this.openFWFilePK2M.Filter = "PK2M OS|pk2mv*.hex|All files|*.*";
-            this.openFWFilePK2M.InitialDirectory = ".";
-            this.openFWFilePK2M.Title = "Open PK2M Operating System File";
-            */
             // 
             // timerInitHW
             // 
@@ -1922,6 +1909,7 @@ namespace PICkit2V2
         private System.Windows.Forms.ToolStripMenuItem autoSearchOnStartToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem pICkitminusReadMeToolStripMenuItem;
         private System.Windows.Forms.Timer timerInitHW;
+        private System.Windows.Forms.ToolStripMenuItem enableAuxiliaryFlashToolStripMenuItem;
     }
 }
 

@@ -906,7 +906,12 @@ namespace PICkit2V2
         private void timerRun_Tick(object sender, EventArgs e)
         {
             timerRun.Enabled = false;
-            bool ret = Pk2.readUSB();  // will wait here until trigger
+            // bool ret = Pk2.readUSB();  // will wait here until trigger
+            bool ret = false;
+            while (ret == false)
+            {
+                ret = Pk2.readUSBNoDisconnect();  // will wait here until trigger
+            }
             Thread.Sleep(250);
             this.RemoveOwnedForm(trigDialog);
             trigDialog.Close();

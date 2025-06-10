@@ -116,10 +116,15 @@ namespace PICkit2V2
 			commandArray[2] = 0x4B;
 			commandArray[3] = 0x32;
 			commandArray[4] = memsize;    // PICkit 2 EEPROM size 0 = 128K, 1 = 256K
-			if (writeUSB(commandArray))
-			{
-				//Thread.Sleep(5000);     // Wait for FLASH erase
 
+			bool ret = false;
+			ret = writeUSB(commandArray);
+			
+			if (isPK3)
+				Thread.Sleep(5000);     // Wait for FLASH erase
+
+			if (ret)
+			{
 				LearnMode = true;
 				// Set VPP voltage by family
 				float vpp = DevFile.Families[GetActiveFamily()].Vpp;
@@ -560,6 +565,21 @@ namespace PICkit2V2
 				return true;
 			else
 				return false;
+		}
+		public static bool PartHasAuxFlash()
+		{
+			if ((DevFile.PartsList[ActivePart].ProgMemPanelBufs & 0xf0) == 144)
+				return true;
+			else
+				return false;
+		}
+
+		public static uint GetAuxFlashAddress()
+        {
+			if ((DevFile.PartsList[ActivePart].ProgMemPanelBufs & 0xf0) == 144)
+				return 0xFF8000;
+			else
+				return 0;
 		}
 
 		public static bool FamilyIsPIC32()
@@ -2445,6 +2465,7 @@ namespace PICkit2V2
 		public static void ResetBuffers()
 		{
 			DeviceBuffers = new DeviceData(DevFile.PartsList[ActivePart].ProgramMem,
+											DevFile.PartsList[ActivePart].BootFlash,
 											DevFile.PartsList[ActivePart].EEMem,
 											DevFile.PartsList[ActivePart].ConfigWords,
 											DevFile.PartsList[ActivePart].UserIDWords,
@@ -2458,6 +2479,7 @@ namespace PICkit2V2
 		public static DeviceData CloneBuffers(DeviceData copyFrom)
 		{
 			DeviceData newBuffers = new DeviceData(DevFile.PartsList[ActivePart].ProgramMem,
+											DevFile.PartsList[ActivePart].BootFlash,
 											DevFile.PartsList[ActivePart].EEMem,
 											DevFile.PartsList[ActivePart].ConfigWords,
 											DevFile.PartsList[ActivePart].UserIDWords,
@@ -2856,6 +2878,66 @@ namespace PICkit2V2
 			return retVal;
 		}
 
+		public static bool writeUSBNoDisconnect(byte[] commandList)
+		{
+			if (usbWriteHandle == IntPtr.Zero)
+			{
+				return false;
+			}
+			if (wrhEventObject == IntPtr.Zero)
+			{
+				wrhEventObject = USB.CreateEvent
+					(IntPtr.Zero,
+					true,
+					true,
+					"");
+
+				//Set the members of the overlapped structure.
+				HIDWrOverlapped.hEvent = wrhEventObject;
+				HIDWrOverlapped.Offset = 0;
+				HIDWrOverlapped.OffsetHigh = 0;
+			}
+			uint Result;
+			bool retVal = false;
+
+			int bytesWritten = 0;
+
+			Usb_write_array[0] = 0;                         // first byte must always be zero.        
+			for (int index = 1; index < Usb_write_array.Length; index++)
+			{
+				Usb_write_array[index] = KONST.END_OF_BUFFER;              // init array to all END_OF_BUFFER cmds.
+			}
+			Array.Copy(commandList, 0, Usb_write_array, 1, commandList.Length);
+			Result = USB.WriteFile(usbWriteHandle, Usb_write_array, Usb_write_array.Length, ref bytesWritten, ref HIDWrOverlapped);
+
+			Result = USB.WaitForSingleObject(wrhEventObject, 1000);
+
+			switch (Result)
+			{
+				case KONST.WAIT_OBJECT_0:
+					{
+						retVal = true;
+						break;
+					}
+				case KONST.WAIT_TIMEOUT:
+					{
+						
+						Result = USB.CancelIo(usbWriteHandle);
+						retVal = false;
+						//A timeout may mean that the device has been removed.
+						//Close the device handles and set DeviceDetected = False
+						//so the next access attempt will search for the device.
+						break;
+					}
+				default:
+					{
+						break;
+					}
+			}
+
+			USB.ResetEvent(wrhEventObject);
+			return retVal;
+		}
 
 		public static bool readUSB()
 		{
@@ -2918,6 +3000,61 @@ namespace PICkit2V2
 			USB.ResetEvent(hEventObject);
 			return retVal;
 		}
+
+		public static bool readUSBNoDisconnect()
+		{
+			if (usbReadHandle == IntPtr.Zero)
+			{
+				return false;
+			}
+			int bytesRead = 0;
+			uint Result;
+			bool retVal = false;
+
+			if (hEventObject == IntPtr.Zero)
+			{
+				hEventObject = USB.CreateEvent
+					(IntPtr.Zero,
+					true,
+					true,
+					"");
+
+				//Set the members of the overlapped structure.
+				HIDOverlapped.hEvent = hEventObject;
+				HIDOverlapped.Offset = 0;
+				HIDOverlapped.OffsetHigh = 0;
+			}
+
+			if (LearnMode)
+				return true;
+
+			Result = USB.ReadFile(usbReadHandle, Usb_read_array, Usb_read_array.Length, ref bytesRead, ref HIDOverlapped);
+
+			Result = USB.WaitForSingleObject(hEventObject, 1000);
+
+			switch (Result)
+			{
+				case KONST.WAIT_OBJECT_0:
+					{
+						retVal = true;
+						break;
+					}
+				case KONST.WAIT_TIMEOUT:
+					{
+						Result = USB.CancelIo(usbReadHandle);
+						retVal = false;
+						break;
+					}
+				default:
+					{
+						break;
+					}
+			}
+
+			USB.ResetEvent(hEventObject);
+			return retVal;
+		}
+
 
 		public static bool VerifyDeviceID(bool resetOnNoDevice, bool keepVddOn)
 		{
