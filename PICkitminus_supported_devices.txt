@@ -6,8 +6,8 @@ Device file and software updates available from
 http://kair.us/projects/pickitminus/index.html
 
 
-Device File Version:   2.64.29
-Number of devices = 1540
+Device File Version:   2.64.32
+Number of devices = 1577
 
 Device Name                  Device Family               Device ID
 -----------                  -------------               ---------
@@ -350,6 +350,18 @@ PIC16F17156                  Midrange/1.8V Min MSB1st    0x00003105
 PIC16F17174                  Midrange/1.8V Min MSB1st    0x00003102
 PIC16F17175                  Midrange/1.8V Min MSB1st    0x00003104
 PIC16F17176                  Midrange/1.8V Min MSB1st    0x00003106
+PIC16F17524                  Midrange/1.8V Min MSB1st    0x00003115
+PIC16F17525                  Midrange/1.8V Min MSB1st    0x00003119
+PIC16F17526                  Midrange/1.8V Min MSB1st    0x0000311D
+PIC16F17544                  Midrange/1.8V Min MSB1st    0x00003116
+PIC16F17545                  Midrange/1.8V Min MSB1st    0x0000311A
+PIC16F17546                  Midrange/1.8V Min MSB1st    0x0000311E
+PIC16F17554                  Midrange/1.8V Min MSB1st    0x00003117
+PIC16F17555                  Midrange/1.8V Min MSB1st    0x0000311B
+PIC16F17556                  Midrange/1.8V Min MSB1st    0x0000311F
+PIC16F17574                  Midrange/1.8V Min MSB1st    0x00003118
+PIC16F17575                  Midrange/1.8V Min MSB1st    0x0000311C
+PIC16F17576                  Midrange/1.8V Min MSB1st    0x00003120
 PIC16F18013                  Midrange/1.8V Min MSB1st    0x000030F1
 PIC16F18014                  Midrange/1.8V Min MSB1st    0x000030F2
 PIC16F18015                  Midrange/1.8V Min MSB1st    0x000030F5
@@ -972,6 +984,7 @@ PIC24FJ64GL302               Others/PIC24r2              0x00002200
 PIC24FJ64GL303               Others/PIC24r2              0x00002202
 PIC24FJ64GL305               Others/PIC24r2              0x00002204
 PIC24FJ64GL306               Others/PIC24r2              0x00002206
+PIC24FJ64GU205               Others/PIC24r2              0x00009A19
 PIC24FJ128DA106              Others/PIC24r2              0x00004109
 PIC24FJ128DA110              Others/PIC24r2              0x0000410B
 PIC24FJ128DA206              Others/PIC24r2              0x00004108
@@ -1083,15 +1096,22 @@ DSPIC33EP256MC206            Others/PIC24EP              0x00001F63
 DSPIC33EP256MC502            Others/PIC24EP              0x00001F65
 DSPIC33EP256MC504            Others/PIC24EP              0x00001F64
 DSPIC33EP256MC506            Others/PIC24EP              0x00001F67
+DSPIC33EP256MU806            Others/PIC24EP              0x0000185A
+DSPIC33EP256MU810            Others/PIC24EP              0x00001862
+DSPIC33EP256MU814            Others/PIC24EP              0x00001863
 DSPIC33EP512GP502            Others/PIC24EP              0x0000178D
 DSPIC33EP512GP504            Others/PIC24EP              0x0000178C
 DSPIC33EP512GP506            Others/PIC24EP              0x0000178F
+DSPIC33EP512GP806            Others/PIC24EP              0x0000187D
 DSPIC33EP512MC202            Others/PIC24EP              0x00001781
 DSPIC33EP512MC204            Others/PIC24EP              0x00001780
 DSPIC33EP512MC206            Others/PIC24EP              0x00001783
 DSPIC33EP512MC502            Others/PIC24EP              0x00001785
 DSPIC33EP512MC504            Others/PIC24EP              0x00001784
 DSPIC33EP512MC506            Others/PIC24EP              0x00001787
+DSPIC33EP512MC806            Others/PIC24EP              0x00001879
+DSPIC33EP512MU810            Others/PIC24EP              0x00001872
+DSPIC33EP512MU814            Others/PIC24EP              0x00001873
 PIC24EP32GP202               Others/PIC24EP              0x00001C19
 PIC24EP32GP203               Others/PIC24EP              0x00001C1A
 PIC24EP32GP204               Others/PIC24EP              0x00001C18
@@ -1115,12 +1135,17 @@ PIC24EP128MC206              Others/PIC24EP              0x00001E53
 PIC24EP256GP202              Others/PIC24EP              0x00001F79
 PIC24EP256GP204              Others/PIC24EP              0x00001F78
 PIC24EP256GP206              Others/PIC24EP              0x00001F7B
+PIC24EP256GU810              Others/PIC24EP              0x00001826
+PIC24EP256GU814              Others/PIC24EP              0x00001827
 PIC24EP256MC202              Others/PIC24EP              0x00001F71
 PIC24EP256MC204              Others/PIC24EP              0x00001F70
 PIC24EP256MC206              Others/PIC24EP              0x00001F73
 PIC24EP512GP202              Others/PIC24EP              0x00001799
 PIC24EP512GP204              Others/PIC24EP              0x00001798
 PIC24EP512GP206              Others/PIC24EP              0x0000179B
+PIC24EP512GP806              Others/PIC24EP              0x0000183D
+PIC24EP512GP810              Others/PIC24EP              0x00001836
+PIC24EP512GP814              Others/PIC24EP              0x00001837
 PIC24EP512MC202              Others/PIC24EP              0x00001791
 PIC24EP512MC204              Others/PIC24EP              0x00001790
 PIC24EP512MC206              Others/PIC24EP              0x00001793
@@ -1243,6 +1268,9 @@ DSPIC33CK256MP203            Others/dsPIC33CK            0x00007C31
 DSPIC33CK256MP205            Others/dsPIC33CK            0x00007C32
 DSPIC33CK256MP206            Others/dsPIC33CK            0x00007C33
 DSPIC33CK256MP208            Others/dsPIC33CK            0x00007C34
+DSPIC33CK256MP305            Others/dsPIC33CK            0x00009F02
+DSPIC33CK256MP306            Others/dsPIC33CK            0x00009F03
+DSPIC33CK256MP308            Others/dsPIC33CK            0x00009F04
 DSPIC33CK256MP405            Others/dsPIC33CK            0x0000A002
 DSPIC33CK256MP406            Others/dsPIC33CK            0x0000A003
 DSPIC33CK256MP408            Others/dsPIC33CK            0x0000A004
@@ -1252,14 +1280,23 @@ DSPIC33CK256MP503            Others/dsPIC33CK            0x00007C71
 DSPIC33CK256MP505            Others/dsPIC33CK            0x00007C72
 DSPIC33CK256MP506            Others/dsPIC33CK            0x00007C73
 DSPIC33CK256MP508            Others/dsPIC33CK            0x00007C74
+DSPIC33CK256MP605            Others/dsPIC33CK            0x00009F42
+DSPIC33CK256MP606            Others/dsPIC33CK            0x00009F43
+DSPIC33CK256MP608            Others/dsPIC33CK            0x00009F44
 DSPIC33CK256MP705            Others/dsPIC33CK            0x0000A042
 DSPIC33CK256MP706            Others/dsPIC33CK            0x0000A043
 DSPIC33CK256MP708            Others/dsPIC33CK            0x0000A044
 DSPIC33CK256MP710            Others/dsPIC33CK            0x0000A045
+DSPIC33CK512MP305            Others/dsPIC33CK            0x00009F12
+DSPIC33CK512MP306            Others/dsPIC33CK            0x00009F13
+DSPIC33CK512MP308            Others/dsPIC33CK            0x00009F14
 DSPIC33CK512MP405            Others/dsPIC33CK            0x0000A012
 DSPIC33CK512MP406            Others/dsPIC33CK            0x0000A013
 DSPIC33CK512MP408            Others/dsPIC33CK            0x0000A014
 DSPIC33CK512MP410            Others/dsPIC33CK            0x0000A015
+DSPIC33CK512MP605            Others/dsPIC33CK            0x00009F52
+DSPIC33CK512MP606            Others/dsPIC33CK            0x00009F53
+DSPIC33CK512MP608            Others/dsPIC33CK            0x00009F54
 DSPIC33CK512MP705            Others/dsPIC33CK            0x0000A052
 DSPIC33CK512MP706            Others/dsPIC33CK            0x0000A053
 DSPIC33CK512MP708            Others/dsPIC33CK            0x0000A054
