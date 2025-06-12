@@ -30,7 +30,7 @@ The device file, PK2DeviceFile.dat contains information of different chips and a
 
 After the official support ended, many people started to modify the device file with the [editor by dougy83](https://sites.google.com/site/pk2devicefileeditor/). The result was many different versions of the device file which supported slightly different devices. Also many incorrectly created/copied devices creeped into the device files that time. I also shared a version on my web site, to which I had added or corrected some devices. The last version was 1.63.149 from 13.2.2017, supporting 743 devices.
 
-When Anobium started the PICkitplus project, he made a huge effort to gather all different device files floating around, and merged those into one file with all devices created so far. He also added many new devices and most importantly, PIC16 and PIC18 MSB1st families, partly based on work of bequest333. The last openly published PICkitplus device file 2.63.218 from December 2020 has 969 devices. I used this as starting point for PICkitminus.
+When Anobium started the PICkitplus project, he made a huge effort to gather all different device files floating around, and merged those into one file with all devices created so far. He also added many new devices, fixed problems with existing devices, and most importantly, added PIC16 and PIC18 MSB1st families, partly based on work of bequest333. The last openly published PICkitplus device file 2.63.218 from December 2020 has 969 devices. I used this as starting point for PICkitminus.
 
 If you want to support Anobium's efforts and contribution to the device file, consider buying the [PICkitPlus software](https://www.pickitplus.co.uk/).
 
