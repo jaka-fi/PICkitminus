@@ -732,6 +732,9 @@ using Pk3h = PICkit2V2.PK3Helpers;
 //          Were broken since 3.26.05.
 // Change:  Minimum PICkit firmware 2.32.02 as new script commands required by some
 //          PIC24/33 EP families
+//
+// version 3.28.00 - 12 Jun 2025 JAKA
+// Change:  Release version with PIC24/33 EP8 family support
 
 
 

@@ -6,8 +6,8 @@ Device file and software updates available from
 http://kair.us/projects/pickitminus/index.html
 
 
-Device File Version:   2.64.32
-Number of devices = 1577
+Device File Version:   2.64.33
+Number of devices = 1588
 
 Device Name                  Device Family               Device ID
 -----------                  -------------               ---------
@@ -967,6 +967,12 @@ PIC24HJ128GP510              Others/PIC24                0x00000063
 PIC24HJ256GP206              Others/PIC24                0x00000071
 PIC24HJ256GP210              Others/PIC24                0x00000073
 PIC24HJ256GP610              Others/PIC24                0x0000007B
+PIC24FJ32GP202               Others/PIC24r2              0x00009A00
+PIC24FJ32GP203               Others/PIC24r2              0x00009A04
+PIC24FJ32GP205               Others/PIC24r2              0x00009A08
+PIC24FJ32GU202               Others/PIC24r2              0x00009A01
+PIC24FJ32GU203               Others/PIC24r2              0x00009A05
+PIC24FJ32GU205               Others/PIC24r2              0x00009A09
 PIC24FJ64GA202               Others/PIC24r2              0x00004C50
 PIC24FJ64GA204               Others/PIC24r2              0x00004C51
 PIC24FJ64GA306               Others/PIC24r2              0x000046C0
@@ -984,6 +990,11 @@ PIC24FJ64GL302               Others/PIC24r2              0x00002200
 PIC24FJ64GL303               Others/PIC24r2              0x00002202
 PIC24FJ64GL305               Others/PIC24r2              0x00002204
 PIC24FJ64GL306               Others/PIC24r2              0x00002206
+PIC24FJ64GP202               Others/PIC24r2              0x00009A10
+PIC24FJ64GP203               Others/PIC24r2              0x00009A14
+PIC24FJ64GP205               Others/PIC24r2              0x00009A18
+PIC24FJ64GU202               Others/PIC24r2              0x00009A11
+PIC24FJ64GU203               Others/PIC24r2              0x00009A15
 PIC24FJ64GU205               Others/PIC24r2              0x00009A19
 PIC24FJ128DA106              Others/PIC24r2              0x00004109
 PIC24FJ128DA110              Others/PIC24r2              0x0000410B
