@@ -24,13 +24,13 @@ Features
 - Command line software works on Windows XP, 7, 10, 11, Linux and MacOS
 - Retains all the good features from original Microchip PICkit2 and PICkit3 stand-alone software
 
-About device file
+About the device file
 -----------------
 The device file, PK2DeviceFile.dat contains information of different chips and all the scripts needed to program them. This file was maintained by Microchip until 2012 when the last PICkit3 software was released. The device file 1.62.15 supported 639 devices.
 
-After the official support ended, many people started to modify the device file with the [editor by dougy83](https://sites.google.com/site/pk2devicefileeditor/). The result was many different versions of the device file which supported slightly different devices. Also many incorrectly created/copied devices creeped into the device files that time. I also shared a version on my web site, to which I had added or corrected some devices. The last version was 1.63.149 from 13.2.2017, supporting 743 devices.
+After the official support ended, many people started to modify the device file with the [editor by dougy83](https://sites.google.com/site/pk2devicefileeditor/). The result was many different versions of the device file which supported slightly different devices. Also many incorrectly created/copied devices creeped into the device files that time. I also shared a fork on my web site, to which I had added or corrected some devices which I used in my projects. The last version was 1.63.149 from 13.2.2017, supporting 743 devices.
 
-When Anobium started the PICkitplus project, he made a huge effort to gather all different device files floating around, and merged those into one file with all devices created so far. He also added many new devices, fixed problems with existing devices, and most importantly, added PIC16 and PIC18 MSB1st families, partly based on work of bequest333. The last openly published PICkitplus device file 2.63.218 from December 2020 has 969 devices. I used this as starting point for PICkitminus.
+When Anobium started the PICkitplus project, he made a huge effort to gather all the different device files floating around, and merged those into one file with all devices created so far. He also added many new devices, fixed problems with existing devices, and most importantly, added PIC16 and PIC18 MSB1st families, partly based on work of bequest333. The last openly published PICkitplus device file 2.63.218.15 at [Anobium's Github repo](https://github.com/Anobium/PICKitPlus/releases) from December 2020 has 969 devices. I used this as starting point for PICkitminus.
 
 If you want to support Anobium's efforts and contribution to the device file, consider buying the [PICkitPlus software](https://www.pickitplus.co.uk/).
 
