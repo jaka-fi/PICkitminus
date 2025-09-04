@@ -57,12 +57,12 @@ Thanks
 ------
 I haven't developed these software all by myself. The biggest part has of course been Microchip's original work, and all the contributions they had received from PICkit2 users. In addition to that, I have used work from other people. My thanks go to all contributions listed below:
 
-- [bequest333](https://www.eevblog.com/forum/microcontrollers/pic16f18857-programming-with-pickit2/) for initially adding support for MSB 1st chips
-- Anobium from [PICkitPlus](https://www.pickitplus.co.uk/) team for providing updated device file until 2020
+- bequest333 [for initially adding support for MSB 1st chips](https://www.eevblog.com/forum/microcontrollers/pic16f18857-programming-with-pickit2/)
+- Anobium from [PICkitPlus](https://www.pickitplus.co.uk/) team for [providing updated device file until 2020](https://github.com/Anobium/PICKitPlus/releases)
 - dougy83 for creating [device file editor](https://sites.google.com/site/pk2devicefileeditor/)
 - Miklós Márton for [adding PICkit3 support to pk2cmd](https://github.com/martonmiklos/pk2cmd)
-- [timijk, scasis and TrevorW](https://forum.microchip.com/s/topic/a5C3l000000MOXFEA4/t324373) for adding support for all PIC32MX
+- timijk, scasis and TrevorW for [adding support for all PIC32MX](https://forum.microchip.com/s/topic/a5C3l000000MOXFEA4/t324373)
 - Adem Gdk for adding some SPI FLASH devices and testing SPI FLASH support
-- [Jaren Sanson](https://jared.geek.nz/2013/08/pickit2-revisited/) for tool which adds some PIC24 devices
+- Jaren Sanson for [tool which adds some PIC24 devices](https://jared.geek.nz/2013/08/pickit2-revisited/)
 - Microchip for providing sample chips for testing purposes
 - All people who have sent me bug reports
