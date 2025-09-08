@@ -1120,6 +1120,8 @@ namespace PICkit2V2
 
 		public static int GetActiveFamily()
 		{
+			if (DevFile.PartsList[ActivePart].Family == DevFile.Info.NumberFamilies)
+				return 0;
 			return DevFile.PartsList[ActivePart].Family;
 		}
 

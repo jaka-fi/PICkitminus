@@ -735,6 +735,10 @@ using Pk3h = PICkit2V2.PK3Helpers;
 //
 // version 3.28.00 - 12 Jun 2025 JAKA
 // Change:  Release version with PIC24/33 EP8 family support
+//
+// version 3.28.01 - 8 Sep 2025 JAKA
+// Feature: Device Family -> All families allows to manually select any part,
+//			without need to know which family the part belongs.
 
 
 
@@ -831,6 +835,7 @@ namespace PICkit2V2
 		private bool blockingReadEnabled = false;
 		private bool exportPacked = true;
 		private bool deviceVerification = true;
+		private bool allFamiliesSelect = false;
 		private byte ptgMemory = 0; // 128K default
 		private string lastFamily = "Midrange";
 		private string hex1 = "";
@@ -3218,6 +3223,7 @@ namespace PICkit2V2
 				}
 
 			}
+			deviceToolStripMenuItem.DropDown.Items.Add("All families");
 
 			deviceToolStripMenuItem.Enabled = true;
 		}
@@ -3575,7 +3581,7 @@ namespace PICkit2V2
 			lookForPoweredTarget(KONST.ShowMessage & !timerAutoImportWrite.Enabled);
 			// don't show message if AutoImportWrite mode enabled.
 
-			if (Pk2.DevFile.Families[family].PartDetect)
+			if (Pk2.DevFile.Families[family].PartDetect && allFamiliesSelect == false)
 			{
 				// Pk2.SetVDDVoltage(3.3F, 0.85F, true);	// force to 3v3 on detect inside family
 				if (Pk2.DetectDevice(family, false, chkBoxVddOn.Checked, this))
@@ -7823,6 +7829,10 @@ namespace PICkit2V2
 
 		private void FamilySelectLogic(int family, bool updateGUI_OK)
 		{
+			//displayStatusWindow.Text = string.Format("family is {0} ", family);
+			//if (family == Pk2.DevFile.Info.NumberFamilies)
+			//	return;
+
 			if (family != Pk2.GetActiveFamily())
 			{
 				Pk2.ActivePart = 0;         // no part is last part in new family
@@ -7832,36 +7842,56 @@ namespace PICkit2V2
 			{
 				setGUIVoltageLimits(false); // keep last voltage set if same family
 			}
-
 			displayStatusWindow.Text = "";
 
-			if (Pk2.DevFile.Families[family].PartDetect)
-			{ // searchable families
-				Pk2.SetActiveFamily(family);
-				//setGUIVoltageLimits(false);
-				if (preProgrammingCheck(family, true))
-				{
-					displayStatusWindow.Text = Pk2.DevFile.Families[family].FamilyName + " device found.";
-					setGUIVoltageLimits(false);
-				}
-				comboBoxSelectPart.Visible = false;
-				displayDevice.Visible = true;
-				if (updateGUI_OK)
-					updateGUI(KONST.UpdateMemoryDisplays, KONST.EnableMclrCheckBox, KONST.UpdateProtections);
-			}
-			else
-			{ // drop-down select families
+			if (family >= Pk2.DevFile.Info.NumberFamilies)
+			{	// all families (drop-down selection)
 				buildDeviceSelectDropDown(family);
 				comboBoxSelectPart.Visible = true;
 				comboBoxSelectPart.SelectedIndex = 0;
 				displayDevice.Visible = true;
+				allFamiliesSelect = true;
 				Pk2.SetActiveFamily(family);
 				//setGUIVoltageLimits(true);
 				if (updateGUI_OK)
+				{
 					updateGUI(KONST.UpdateMemoryDisplays, KONST.EnableMclrCheckBox, KONST.UpdateProtections);
+					statusGroupBox.Text = "All families Configuration";
+					displayStatusWindow.Text = "Family set to All families.\nOnly manual part selection possible.";
+				}
 				semiDisableGUIControls();
-				//UARTtoolStripMenuItem.Enabled = true;   // Don't disable UART mode. Why it would need a device to be selected?
-				//revertToMPLABModeToolStripMenuItem.Enabled = true;	// Neither revert to MPLAB mode
+			}
+			else
+			{
+				allFamiliesSelect = false;
+				if (Pk2.DevFile.Families[family].PartDetect)
+				{ // searchable families
+					Pk2.SetActiveFamily(family);
+					//setGUIVoltageLimits(false);
+					if (preProgrammingCheck(family, true))
+					{
+						displayStatusWindow.Text = Pk2.DevFile.Families[family].FamilyName + " device found.";
+						setGUIVoltageLimits(false);
+					}
+					comboBoxSelectPart.Visible = false;
+					displayDevice.Visible = true;
+					if (updateGUI_OK)
+						updateGUI(KONST.UpdateMemoryDisplays, KONST.EnableMclrCheckBox, KONST.UpdateProtections);
+				}
+				else
+				{ // drop-down select families
+					buildDeviceSelectDropDown(family);
+					comboBoxSelectPart.Visible = true;
+					comboBoxSelectPart.SelectedIndex = 0;
+					displayDevice.Visible = true;
+					Pk2.SetActiveFamily(family);
+					//setGUIVoltageLimits(true);
+					if (updateGUI_OK)
+						updateGUI(KONST.UpdateMemoryDisplays, KONST.EnableMclrCheckBox, KONST.UpdateProtections);
+					semiDisableGUIControls();
+					//UARTtoolStripMenuItem.Enabled = true;   // Don't disable UART mode. Why it would need a device to be selected?
+					//revertToMPLABModeToolStripMenuItem.Enabled = true;	// Neither revert to MPLAB mode
+				}
 			}
 
 			displayDataSource.Text = "None (Empty/Erased)";
@@ -7870,11 +7900,21 @@ namespace PICkit2V2
 
 		private void buildDeviceSelectDropDown(int family)
 		{
+			bool allFamilies = false;
+			if (family == Pk2.DevFile.Info.NumberFamilies)
+			{
+				allFamilies = true;
+				this.comboBoxSelectPart.DropDownHeight = 450;
+			}
+			else
+            {
+				this.comboBoxSelectPart.DropDownHeight = 212;
+			}
 			comboBoxSelectPart.Items.Clear();
 			comboBoxSelectPart.Items.Add("-Select Part-");
 			for (int part = 1; part < Pk2.DevFile.Info.NumberParts; part++)
 			{
-				if (Pk2.DevFile.PartsList[part].Family == family)
+				if (Pk2.DevFile.PartsList[part].Family == family || allFamilies)
 				{
 					comboBoxSelectPart.Items.Add(Pk2.DevFile.PartsList[part].PartName);
 				}
@@ -10782,7 +10822,6 @@ namespace PICkit2V2
 
 			//partialEnableGUIControls();
 
-			//if (!Pk2.isPK3)          // TODO: PICkit 2 only for now
 			Pk2.ExitUARTMode(); // Just in case.
 			Pk2.VddOff();
 			Pk2.SetVDDVoltage(3.3F, 0.85F, false);
