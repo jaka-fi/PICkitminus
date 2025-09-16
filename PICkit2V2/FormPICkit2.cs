@@ -739,7 +739,12 @@ using Pk3h = PICkit2V2.PK3Helpers;
 // version 3.28.01 - 8 Sep 2025 JAKA
 // Feature: Device Family -> All families allows to manually select any part,
 //			without need to know which family the part belongs.
-
+//
+// version 3.28.02 - 16 Sep 2025 JAKA
+// Bug Fix: Ensure /MLCR stays low during the whole programming operation, not just before
+//          the first prog.entry.
+// Bug Fix: Fix displaying of PIC32 Program Flash and Boot Flash labels in single
+//          window view. Were broken since 3.27.04.
 
 
 
@@ -2558,7 +2563,7 @@ namespace PICkit2V2
 						address += rowAddressIncrement;
 					}
 				}
-				if (Pk2.PartHasAuxFlash())
+				else if (Pk2.PartHasAuxFlash())
 				{ // PIC24/dsPIC with Auxiliary flash - insert titles
 					dataGridProgramMemory.ShowCellToolTips = false;
 					// Program Flash addresses
@@ -4685,9 +4690,10 @@ namespace PICkit2V2
 			}
 
 			Pk2.SetMCLRTemp(true);     // assert /MCLR to prevent code execution before programming mode entered.
+			if (!Pk2.LearnMode)
+				Pk2.HoldMCLR(true);			// Keep /MCLR asserted during rest of programming operations
 			Pk2.VddOn();
-			//Thread.Sleep(100);
-
+			
 			// check device ID in LearnMode
 			if (Pk2.LearnMode && (Pk2.DevFile.Families[Pk2.GetActiveFamily()].DeviceIDMask > 0))
 			{
@@ -4715,6 +4721,7 @@ namespace PICkit2V2
 					// verify OSCCAL
 					if (!verifyOSCCAL())
 					{
+						Pk2.HoldMCLR(checkBoxMCLR.Checked); // Programming interrupted, restore /MCLR setting
 						return false;
 					}
 
@@ -4974,6 +4981,7 @@ namespace PICkit2V2
 						statusWindowColor = Constants.StatusColor.red;
 						conditionalVDDOff();
 						updateGUI(KONST.UpdateMemoryDisplays, KONST.DontEnableMclrCheckBox, KONST.DontUpdateProtections);
+						Pk2.HoldMCLR(checkBoxMCLR.Checked); // Programming done, restore /MCLR setting
 						return false;
 					}
 				}
@@ -4984,6 +4992,7 @@ namespace PICkit2V2
 						statusWindowColor = Constants.StatusColor.red;
 						conditionalVDDOff();
 						updateGUI(KONST.UpdateMemoryDisplays, KONST.DontEnableMclrCheckBox, KONST.DontUpdateProtections);
+						Pk2.HoldMCLR(checkBoxMCLR.Checked); // Programming done, restore /MCLR setting
 						return false;
 					}
 				}
@@ -5092,7 +5101,6 @@ namespace PICkit2V2
 						previousChunkWasBlank = wholeChunkIsBlank;
 						progressBar1.PerformStep();
 					} while (wordsWritten < endOfBuffer && !stopOperation);
-
 					Pk2.RunScript(KONST.PROG_EXIT, 1);
 				}
 			}
@@ -5626,7 +5634,7 @@ namespace PICkit2V2
 				//Pk2.WriteDebugVector(0x12343ABC);
 
 				conditionalVDDOff();
-
+				
 				if (!verifyOnWriteToolStripMenuItem.Checked)
 				{
 					displayStatusWindow.Text += "Done.";
@@ -5635,11 +5643,16 @@ namespace PICkit2V2
 				{
 					displayStatusWindow.Text = "Programmer-To-Go download complete.";
 				}
+                else
+                {
+					Pk2.HoldMCLR(checkBoxMCLR.Checked); // Programming done, restore /MCLR setting
+				}
 				updateGUI(KONST.UpdateMemoryDisplays, KONST.DontEnableMclrCheckBox, KONST.DontUpdateProtections);
 
 				return verifySuccess;
 
 			}
+			Pk2.HoldMCLR(checkBoxMCLR.Checked); // Programming failed, restore /MCLR setting
 			return false; // verifySuccess false
 
 		}
@@ -7829,10 +7842,6 @@ namespace PICkit2V2
 
 		private void FamilySelectLogic(int family, bool updateGUI_OK)
 		{
-			//displayStatusWindow.Text = string.Format("family is {0} ", family);
-			//if (family == Pk2.DevFile.Info.NumberFamilies)
-			//	return;
-
 			if (family != Pk2.GetActiveFamily())
 			{
 				Pk2.ActivePart = 0;         // no part is last part in new family
