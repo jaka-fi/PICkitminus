@@ -591,6 +591,15 @@ namespace PICkit2V2
 			}
 			return (DevFile.Families[GetActiveFamily()].FamilyName.Substring(0, maxLength) == "PIC32");
 		}
+		public static bool FamilyIsdsPIC33AK()
+		{
+			int maxLength = DevFile.Families[GetActiveFamily()].FamilyName.Length;
+			if (maxLength > 9)
+			{
+				maxLength = 9;
+			}
+			return (DevFile.Families[GetActiveFamily()].FamilyName.Substring(0, maxLength) == "dsPIC33AK");
+		}
 
 		public static bool FamilyIsdsPIC30()
 		{
@@ -1876,6 +1885,7 @@ namespace PICkit2V2
 							DevFile.PartsList[l_x].LVPScript = binRead.ReadUInt16();
 							// Fill the config masks/blanks for >9 which aren't stored in device file
 							// for (int l_index = 9; l_index < KONST.NumConfigMasks; l_index++)
+							/*
 							for (int l_index = 9; l_index < DevFile.PartsList[l_x].ConfigWords; l_index++)
 							{
 									DevFile.PartsList[l_x].ConfigMasks[l_index] = 0xffff;
@@ -1885,7 +1895,7 @@ namespace PICkit2V2
 							{
 									DevFile.PartsList[l_x].ConfigBlank[l_index] = 0xffff;
 							}
-
+							*/
 						}
 						//
 						// now read all scripts if they are there

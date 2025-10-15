@@ -7,7 +7,7 @@ namespace PICkit2V2
 	public class Constants
 	{
 		// APPLICATION VERSION
-		public const string AppVersion = "3.28.02";
+		public const string AppVersion = "3.28.03";
 		public const byte DevFileCompatLevel = 6;
 		public const byte DevFileCompatLevelMin = 0;
 		public const string UserGuideFileNamePK2 = "\\PICkit2 User Guide 51553E.pdf";
@@ -56,7 +56,8 @@ namespace PICkit2V2
 		public const ushort ConfigRows = 2;//2
 		public const ushort ConfigColumns = 4;//4
 		public const ushort MaxReadCfgMasks = 8;//8
-		public const ushort NumConfigMasks = 18; // was 9, increased to 18 to support Q83/Q84 25.8.2021
+		public const ushort NumConfigMasks = 9; // was 9, increased to 18 to support Q83/Q84 25.8.2021
+												// Changed back to 9 17.9.2025. Masks/blanks > 9 handled separately.
 		//
 		public enum PICkit2USB
 		{
@@ -352,6 +353,9 @@ namespace PICkit2V2
 		// PIC32 related
 		public const uint P32_PROGRAM_FLASH_START_ADDR = 0x1D000000;
 		public const uint P32_BOOT_FLASH_START_ADDR = 0x1FC00000;
+
+		// dsPIC33AK related
+		public const uint P33AK_PROGRAM_FLASH_START_ADDR = 0x800000;
 
 		// OSCCAL regeration
 		public static uint[] BASELINE_CAL = new uint[41]{

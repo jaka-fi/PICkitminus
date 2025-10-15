@@ -732,11 +732,14 @@ namespace PICkit2V2
                                                 // 7.11.2022: Checked with PIC32MX470F512H, it is enough, with both pk2 and pk3.
                                                 // But this chip uses different PE, still need to check with 1xx/2xx/5xx device.
                                                 // There are 6 such devices in PIC32MX1XX/2XX/5XX 64/100 PIN FAMILY
-            //commandArrayr[commOffSet++] = 0xFF; // 5.46ms*255 = 1.392s
+            //commandArrayr[commOffSet++] = 0x10; // 5.46ms*255 = 1.392s
             commandArrayr[commOffSet++] = KONST._JT2_GET_PE_RESP;
             commandArrayr[commOffSet++] = KONST._JT2_GET_PE_RESP;
             Pk2.writeUSB(commandArrayr);
             // End of delay hack
+
+            float sleepTime = (float)lengthBytes * ((float)600 / (float)262144);
+            Thread.Sleep((int)sleepTime);
 
             // Orig code below, without delay
             //byte[] commandArrayr = new byte[5];
@@ -747,7 +750,7 @@ namespace PICkit2V2
             //commandArrayr[commOffSet++] = KONST._JT2_GET_PE_RESP;
             //commandArrayr[commOffSet++] = KONST._JT2_GET_PE_RESP;
             //Pk2.writeUSB(commandArrayr);
-
+            
             if (Pk2.BusErrorCheck())    // Any timeouts?
             {
                 return 0;           // yes - abort
@@ -899,7 +902,7 @@ namespace PICkit2V2
                     }
                     StepStatusBar();
                 }
-            } while (wordsRead < progMemP32);
+            } while (wordsRead < progMemP32 && !FormPICkit2.stopOperation);
 
             // Read Boot Memory ========================================================================================
             statusWinText += "Boot... ";
@@ -955,33 +958,55 @@ namespace PICkit2V2
                     }
                 }
                 StepStatusBar();
-            } while (wordsRead < bootMemP32);
+            } while (wordsRead < bootMemP32 && !FormPICkit2.stopOperation);
 
             // User ID Memory ========================================================================================
-            statusWinText += "UserIDs... ";
-            UpdateStatusWinText(statusWinText);
-            // User IDs & Configs are in last block of boot mem
-            Pk2.DeviceBuffers.UserIDs[0] = (uint)upload_buffer[uploadIndex];
-            Pk2.DeviceBuffers.UserIDs[1] = (uint)upload_buffer[uploadIndex + 1];
-
-            //timijk: quick fix for PIC32MX1xx/2xx
-            //uploadIndex += bytesPerWord; 
-            if (Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigAddr != Pk2.DevFile.PartsList[Pk2.ActivePart].UserIDAddr)
+            if (!FormPICkit2.stopOperation)
             {
-                uploadIndex += bytesPerWord;
+                statusWinText += "UserIDs... ";
+                UpdateStatusWinText(statusWinText);
+                // User IDs & Configs are in last block of boot mem
+                Pk2.DeviceBuffers.UserIDs[0] = (uint)upload_buffer[uploadIndex];
+                Pk2.DeviceBuffers.UserIDs[1] = (uint)upload_buffer[uploadIndex + 1];
+
+                //timijk: quick fix for PIC32MX1xx/2xx
+                //uploadIndex += bytesPerWord; 
+                if (Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigAddr != Pk2.DevFile.PartsList[Pk2.ActivePart].UserIDAddr)
+                {
+                    uploadIndex += bytesPerWord;
+                }
             }
 
             // Config Memory ========================================================================================
-            statusWinText += "Config... ";
-            UpdateStatusWinText(statusWinText);
-            for (int cfg = 0; cfg < Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigWords; cfg++)
+            if (!FormPICkit2.stopOperation)
             {
-                Pk2.DeviceBuffers.ConfigWords[cfg] = (uint)upload_buffer[uploadIndex++];
-                Pk2.DeviceBuffers.ConfigWords[cfg] |= (uint)(upload_buffer[uploadIndex++] << 8);
+                statusWinText += "Config... ";
+                UpdateStatusWinText(statusWinText);
+                for (int cfg = 0; cfg < Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigWords; cfg++)
+                {
+                    Pk2.DeviceBuffers.ConfigWords[cfg] = (uint)upload_buffer[uploadIndex++];
+                    Pk2.DeviceBuffers.ConfigWords[cfg] |= (uint)(upload_buffer[uploadIndex++] << 8);
+                }
             }
 
-            statusWinText += "Done.";
-            UpdateStatusWinText(statusWinText);
+            if (!FormPICkit2.stopOperation)
+            {
+                statusWinText += "Done.";
+                UpdateStatusWinText(statusWinText);
+                // update SOURCE box
+                // FormPICkit2.displayDataSource.Text = "Read from " + Pk2.DevFile.PartsList[Pk2.ActivePart].PartName;
+                FormPICkit2.bufferSource = "Read from " + Pk2.DevFile.PartsList[Pk2.ActivePart].PartName;
+            }
+            else
+            {
+                statusWinText = "Read aborted!\nMemory buffers contain partially read data.";
+                UpdateStatusWinText(statusWinText);
+                //statusWindowColor = Constants.StatusColor.yellow;
+                // update SOURCE box
+                // FormPICkit2.displayDataSource.Text = "Partially read from " + Pk2.DevFile.PartsList[Pk2.ActivePart].PartName;
+                FormPICkit2.bufferSource = "Partially read from " + Pk2.DevFile.PartsList[Pk2.ActivePart].PartName;
+            }
+
 
             Pk2.RunScript(KONST.PROG_EXIT, 1);
 
@@ -1051,7 +1076,7 @@ namespace PICkit2V2
             return true;
         }
 
-        public static bool P32Write(bool verifyWrite, bool codeProtect)
+        public static bool P32Write(bool verifyWrite, bool codeProtect, bool skipBlanks)
         {
             Pk2.SetMCLRTemp(true);     // assert /MCLR to prevent code execution before programming mode entered.
             Pk2.VddOn();
@@ -1072,7 +1097,7 @@ namespace PICkit2V2
             UpdateStatusWinText(statusWinText);
 
             // Write Program Memory ====================================================================================
-            statusWinText += "Program Flash... ";
+            statusWinText += "Program Flash.. ";
             UpdateStatusWinText(statusWinText);
 
             int progMemP32 = (int)Pk2.DevFile.PartsList[Pk2.ActivePart].ProgramMem;
@@ -1104,238 +1129,312 @@ namespace PICkit2V2
 
             ResetStatusBar(endOfBuffer / wordsPerLoop);
 
-            // Send PROGRAM command header
-            //timijk 
-            if (wordsPerLoop == 128) PEProgramHeader(KONST.P32_PROGRAM_FLASH_START_ADDR, (uint)(writes * 512));
-            else PEProgramHeader(KONST.P32_PROGRAM_FLASH_START_ADDR, (uint)(writes * 128));
-
-            // First block of data
+            bool chunkIsBlank = false;
             int index = 0;
-            //timijk
-            if (wordsPerLoop == 128) PEProgramSendBlock(index, false); // no response
-            else PEProgramSendBlock2(index, false);
-
-            writes--;
-            StepStatusBar();
-            
-            do
-            {
-                index += wordsPerLoop;
-                //timijk
-                if (wordsPerLoop == 128) PEProgramSendBlock(index, true); // response
-                else PEProgramSendBlock2(index, true); // response
-                StepStatusBar();
-            } while (--writes > 0);
-
-            // get last response
             byte[] commandArrayp = new byte[4];
             int commOffSet = 0;
             commandArrayp[commOffSet++] = KONST.CLR_UPLOAD_BUFFER;
             commandArrayp[commOffSet++] = KONST.EXECUTE_SCRIPT;
             commandArrayp[commOffSet++] = 1;
             commandArrayp[commOffSet++] = KONST._JT2_GET_PE_RESP;
-            Pk2.writeUSB(commandArrayp);
 
-            // Write Boot Memory ====================================================================================
-            statusWinText += "Boot Flash... ";
-            UpdateStatusWinText(statusWinText);
-
-            // Write 512 bytes (128 words) per memory row - so need 2 downloads per row.
-            // MX1xx, MX2xx: (32 words) per memory row - one download per row.
-            // timijk
-            //if (Pk2.DevFile.PartsList[Pk2.ActivePart].PartName.IndexOf("TCHIP-USB-MX2") == 0 ||
-            //    Pk2.DevFile.PartsList[Pk2.ActivePart].PartName.IndexOf("PIC32MX2") == 0 ||
-            //    Pk2.DevFile.PartsList[Pk2.ActivePart].PartName.IndexOf("PIC32MX1") == 0)
-            if ((Pk2.DevFile.PartsList[Pk2.ActivePart].ProgMemPanelBufs & 0xf0) == 0x20)
-            { wordsPerLoop = 32; }
-            else { wordsPerLoop = 128; }
-
-            // First, find end of used Program Memory
-            endOfBuffer = Pk2.FindLastUsedInBuffer(Pk2.DeviceBuffers.ProgramMemory,
-                                            Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue, Pk2.DeviceBuffers.ProgramMemory.Length - 1);
-            if (endOfBuffer < progMemP32)
-                endOfBuffer = 1;
-            else
-                endOfBuffer -= progMemP32;
-            // align end on next loop boundary                 
-            writes = (endOfBuffer + 1) / wordsPerLoop;
-            if (((endOfBuffer + 1) % wordsPerLoop) > 0)
+            if (!skipBlanks)
             {
-                writes++;
-            }
-            if (writes < 2)
-                writes = 2; // 1024 bytes min
+                
+                // Send PROGRAM command header
+                //timijk 
+                if (wordsPerLoop == 128) PEProgramHeader(KONST.P32_PROGRAM_FLASH_START_ADDR, (uint)(writes * 512));
+                else PEProgramHeader(KONST.P32_PROGRAM_FLASH_START_ADDR, (uint)(writes * 128));
 
-            ResetStatusBar(endOfBuffer / wordsPerLoop);
-
-            // Send PROGRAM command header
-            //timijk
-            if (wordsPerLoop == 128) PEProgramHeader(KONST.P32_BOOT_FLASH_START_ADDR, (uint)(writes * 512));
-            else PEProgramHeader(KONST.P32_BOOT_FLASH_START_ADDR, (uint)(writes * 128));
-
-            // First block of data
-            index = progMemP32;
-            //timijk
-            if (wordsPerLoop == 128) PEProgramSendBlock(index, false); // no response
-            else PEProgramSendBlock2(index, false);
-            writes--;
-            StepStatusBar();
-
-            do
-            {
-                index += wordsPerLoop;
+                // First block of data
                 //timijk
-                if (wordsPerLoop == 128) PEProgramSendBlock(index, true); // response
-                else PEProgramSendBlock2(index, true);
+                if (wordsPerLoop == 128) PEProgramSendBlock(index, false); // no response
+                else PEProgramSendBlock2(index, false);
+
+                writes--;
                 StepStatusBar();
-            } while (--writes > 0);
 
-            // get last response
-            Pk2.writeUSB(commandArrayp);
+                do
+                {
+                    index += wordsPerLoop;
 
+                    //timijk
+                    if (wordsPerLoop == 128) PEProgramSendBlock(index, true); // response
+                    else PEProgramSendBlock2(index, true); // response
+                    StepStatusBar();
+                } while (--writes > 0 && !FormPICkit2.stopOperation);
+                // get last response
+                Pk2.writeUSB(commandArrayp);
+
+            }
+            else // write with blank skip
+            {
+                // find length of first continuous block of non-blank data
+
+                int wordsPerChunk = wordsPerLoop * 2;
+                do
+                {
+                    chunkIsBlank = true;
+                    for (int i = 0; i < wordsPerChunk; i++)
+                    {
+                        if (Pk2.DeviceBuffers.ProgramMemory[index + i] != 0xffffffff)
+                        {
+                            chunkIsBlank = false;
+                            break;
+                        }
+                    }
+
+                    if (chunkIsBlank)
+                    {
+                        // nothing
+                        writes--;
+                        writes--;
+                        StepStatusBar();
+                        StepStatusBar();
+                        index += wordsPerLoop;
+                        index += wordsPerLoop;
+                    }
+                    else
+                    {
+                        // need to write the address
+                        if (wordsPerLoop == 128) PEProgramHeader(KONST.P32_PROGRAM_FLASH_START_ADDR + (uint)index * 4, (uint)(2 * 512));
+                        else PEProgramHeader(KONST.P32_PROGRAM_FLASH_START_ADDR + (uint)index * 4, (uint)(2 * 128));
+
+                        // First block of data
+                        //timijk
+                        if (wordsPerLoop == 128) PEProgramSendBlock(index, false); // no response
+                        else PEProgramSendBlock2(index, false);
+
+                        writes--;
+                        StepStatusBar();
+
+                        index += wordsPerLoop;
+
+                        //for (int i = 0; i < 3; i++)
+                        //{
+                            //timijk
+                            if (wordsPerLoop == 128) PEProgramSendBlock(index, true); // response
+                            else PEProgramSendBlock2(index, true); // response
+                            StepStatusBar();
+                            writes--;
+                            index += wordsPerLoop;
+                        //}
+                        // get last response
+                        Pk2.writeUSB(commandArrayp);
+                    }
+                } while (writes > 0 && !FormPICkit2.stopOperation);
+            }
+                
+            // Write Boot Memory ====================================================================================
+            if (!FormPICkit2.stopOperation)
+            {
+                statusWinText += "Boot Flash.. ";
+                UpdateStatusWinText(statusWinText);
+
+                // Write 512 bytes (128 words) per memory row - so need 2 downloads per row.
+                // MX1xx, MX2xx: (32 words) per memory row - one download per row.
+                // timijk
+                //if (Pk2.DevFile.PartsList[Pk2.ActivePart].PartName.IndexOf("TCHIP-USB-MX2") == 0 ||
+                //    Pk2.DevFile.PartsList[Pk2.ActivePart].PartName.IndexOf("PIC32MX2") == 0 ||
+                //    Pk2.DevFile.PartsList[Pk2.ActivePart].PartName.IndexOf("PIC32MX1") == 0)
+                if ((Pk2.DevFile.PartsList[Pk2.ActivePart].ProgMemPanelBufs & 0xf0) == 0x20)
+                { wordsPerLoop = 32; }
+                else { wordsPerLoop = 128; }
+
+                // First, find end of used Program Memory
+                endOfBuffer = Pk2.FindLastUsedInBuffer(Pk2.DeviceBuffers.ProgramMemory,
+                                                Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue, Pk2.DeviceBuffers.ProgramMemory.Length - 1);
+                if (endOfBuffer < progMemP32)
+                    endOfBuffer = 1;
+                else
+                    endOfBuffer -= progMemP32;
+                // align end on next loop boundary                 
+                writes = (endOfBuffer + 1) / wordsPerLoop;
+                if (((endOfBuffer + 1) % wordsPerLoop) > 0)
+                {
+                    writes++;
+                }
+                if (writes < 2)
+                    writes = 2; // 1024 bytes min
+
+                ResetStatusBar(endOfBuffer / wordsPerLoop);
+
+                // Send PROGRAM command header
+                //timijk
+                if (wordsPerLoop == 128) PEProgramHeader(KONST.P32_BOOT_FLASH_START_ADDR, (uint)(writes * 512));
+                else PEProgramHeader(KONST.P32_BOOT_FLASH_START_ADDR, (uint)(writes * 128));
+
+                // First block of data
+                index = progMemP32;
+                //timijk
+                if (wordsPerLoop == 128) PEProgramSendBlock(index, false); // no response
+                else PEProgramSendBlock2(index, false);
+                writes--;
+                StepStatusBar();
+                do
+                {
+                    index += wordsPerLoop;
+                    //timijk
+                    if (wordsPerLoop == 128) PEProgramSendBlock(index, true); // response
+                    else PEProgramSendBlock2(index, true);
+                    StepStatusBar();
+                } while (--writes > 0 && !FormPICkit2.stopOperation);
+
+                // get last response
+                Pk2.writeUSB(commandArrayp);
+            }
             // Write Config Memory ====================================================================================
-            statusWinText += "UserID & Config... ";
-            UpdateStatusWinText(statusWinText);
-
-            uint[] cfgBuf = new uint[4];
-            cfgBuf[0] = Pk2.DeviceBuffers.UserIDs[0] & 0xFF;
-            cfgBuf[0] |= (Pk2.DeviceBuffers.UserIDs[1] & 0xFF) << 8;
-
-            //timijk: quick fix for PIC32MX1xx/2xx
-            if (Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigAddr != Pk2.DevFile.PartsList[Pk2.ActivePart].UserIDAddr)
+            if (!FormPICkit2.stopOperation)
             {
+                statusWinText += "UserID.. Config..";
+                UpdateStatusWinText(statusWinText);
+                
+                uint[] cfgBuf = new uint[4];
+                cfgBuf[0] = Pk2.DeviceBuffers.UserIDs[0] & 0xFF;
+                cfgBuf[0] |= (Pk2.DeviceBuffers.UserIDs[1] & 0xFF) << 8;
 
-                cfgBuf[0] |= 0xFFFF0000;
+                //timijk: quick fix for PIC32MX1xx/2xx
+                if (Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigAddr != Pk2.DevFile.PartsList[Pk2.ActivePart].UserIDAddr)
+                {
 
-                cfgBuf[1] = (Pk2.DeviceBuffers.ConfigWords[0] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[0]) | ((Pk2.DeviceBuffers.ConfigWords[1] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[1]) << 16);
-                cfgBuf[1] |= (~(uint)Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[0] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigBlank[0])
-                            | ((~(uint)Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[1] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigBlank[1]) << 16);
-                cfgBuf[2] = (Pk2.DeviceBuffers.ConfigWords[2] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[2]) | ((Pk2.DeviceBuffers.ConfigWords[3] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[3]) << 16);
-                cfgBuf[2] |= (~(uint)Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[2] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigBlank[2])
-                            | ((~(uint)Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[3] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigBlank[3]) << 16);
-                cfgBuf[3] = (Pk2.DeviceBuffers.ConfigWords[4] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[4]) | ((Pk2.DeviceBuffers.ConfigWords[5] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[5]) << 16);
-                cfgBuf[3] |= (~(uint)Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[4] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigBlank[4])
-                            | ((~(uint)Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[5] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigBlank[5]) << 16);
+                    cfgBuf[0] |= 0xFFFF0000;
 
+                    cfgBuf[1] = (Pk2.DeviceBuffers.ConfigWords[0] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[0]) | ((Pk2.DeviceBuffers.ConfigWords[1] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[1]) << 16);
+                    cfgBuf[1] |= (~(uint)Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[0] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigBlank[0])
+                                | ((~(uint)Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[1] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigBlank[1]) << 16);
+                    cfgBuf[2] = (Pk2.DeviceBuffers.ConfigWords[2] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[2]) | ((Pk2.DeviceBuffers.ConfigWords[3] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[3]) << 16);
+                    cfgBuf[2] |= (~(uint)Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[2] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigBlank[2])
+                                | ((~(uint)Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[3] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigBlank[3]) << 16);
+                    cfgBuf[3] = (Pk2.DeviceBuffers.ConfigWords[4] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[4]) | ((Pk2.DeviceBuffers.ConfigWords[5] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[5]) << 16);
+                    cfgBuf[3] |= (~(uint)Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[4] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigBlank[4])
+                                | ((~(uint)Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[5] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigBlank[5]) << 16);
+
+                }
+                else
+                {
+                    cfgBuf[0] |= ((Pk2.DeviceBuffers.ConfigWords[1] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[1]) << 16);
+                    cfgBuf[0] |= ((~(uint)Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[1] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigBlank[1]) << 16);
+
+                    cfgBuf[1] = (Pk2.DeviceBuffers.ConfigWords[2] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[2]) | ((Pk2.DeviceBuffers.ConfigWords[3] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[3]) << 16);
+                    cfgBuf[1] |= (~(uint)Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[2] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigBlank[2])
+                                | ((~(uint)Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[3] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigBlank[3]) << 16);
+
+                    cfgBuf[2] = (Pk2.DeviceBuffers.ConfigWords[4] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[4]) | ((Pk2.DeviceBuffers.ConfigWords[5] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[5]) << 16);
+                    cfgBuf[2] |= (~(uint)Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[4] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigBlank[4])
+                                | ((~(uint)Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[5] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigBlank[5]) << 16);
+
+                    cfgBuf[3] = (Pk2.DeviceBuffers.ConfigWords[6] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[6]) | ((Pk2.DeviceBuffers.ConfigWords[7] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[7]) << 16);
+                    cfgBuf[3] |= (~(uint)Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[6] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigBlank[6])
+                                | ((~(uint)Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[7] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigBlank[7]) << 16);
+
+                }
+
+                if (codeProtect)
+                {
+                    cfgBuf[3] &= ~((uint)Pk2.DevFile.PartsList[Pk2.ActivePart].CPMask << 16);
+                }
+
+                uint startAddress = KONST.P32_BOOT_FLASH_START_ADDR + (uint)(bootMemP32 * 4);
+
+                byte[] commandArrayc = new byte[39];
+                commOffSet = 0;
+                commandArrayc[commOffSet++] = KONST.CLR_UPLOAD_BUFFER;
+                commandArrayc[commOffSet++] = KONST.EXECUTE_SCRIPT;
+                commandArrayc[commOffSet++] = 36;
+                commandArrayc[commOffSet++] = KONST._JT2_SENDCMD;
+                commandArrayc[commOffSet++] = 0x0E;                 // ETAP_FASTDATA
+                commandArrayc[commOffSet++] = KONST._JT2_XFRFASTDAT_LIT;
+                commandArrayc[commOffSet++] = 0x00;
+                commandArrayc[commOffSet++] = 0x00;
+                commandArrayc[commOffSet++] = 0x03;     // WORD_PROGRAM
+                commandArrayc[commOffSet++] = 0x00;
+                commandArrayc[commOffSet++] = KONST._JT2_XFRFASTDAT_LIT;
+                commandArrayc[commOffSet++] = (byte)(startAddress & 0xFF);
+                commandArrayc[commOffSet++] = (byte)((startAddress >> 8) & 0xFF);
+                commandArrayc[commOffSet++] = (byte)((startAddress >> 16) & 0xFF);
+                commandArrayc[commOffSet++] = (byte)((startAddress >> 24) & 0xFF);
+                commandArrayc[commOffSet++] = KONST._JT2_XFRFASTDAT_LIT;
+                commandArrayc[commOffSet++] = (byte)(cfgBuf[0] & 0xFF);
+                commandArrayc[commOffSet++] = (byte)((cfgBuf[0] >> 8) & 0xFF);
+                commandArrayc[commOffSet++] = (byte)((cfgBuf[0] >> 16) & 0xFF);
+                commandArrayc[commOffSet++] = (byte)((cfgBuf[0] >> 24) & 0xFF);
+                commandArrayc[commOffSet++] = KONST._JT2_WAIT_PE_RESP;
+                startAddress += 4;
+                commandArrayc[commOffSet++] = KONST._JT2_SENDCMD;
+                commandArrayc[commOffSet++] = 0x0E;                 // ETAP_FASTDATA
+                commandArrayc[commOffSet++] = KONST._JT2_XFRFASTDAT_LIT;
+                commandArrayc[commOffSet++] = 0x00;
+                commandArrayc[commOffSet++] = 0x00;
+                commandArrayc[commOffSet++] = 0x03;     // WORD_PROGRAM
+                commandArrayc[commOffSet++] = 0x00;
+                commandArrayc[commOffSet++] = KONST._JT2_XFRFASTDAT_LIT;
+                commandArrayc[commOffSet++] = (byte)(startAddress & 0xFF);
+                commandArrayc[commOffSet++] = (byte)((startAddress >> 8) & 0xFF);
+                commandArrayc[commOffSet++] = (byte)((startAddress >> 16) & 0xFF);
+                commandArrayc[commOffSet++] = (byte)((startAddress >> 24) & 0xFF);
+                commandArrayc[commOffSet++] = KONST._JT2_XFRFASTDAT_LIT;
+                commandArrayc[commOffSet++] = (byte)(cfgBuf[1] & 0xFF);
+                commandArrayc[commOffSet++] = (byte)((cfgBuf[1] >> 8) & 0xFF);
+                commandArrayc[commOffSet++] = (byte)((cfgBuf[1] >> 16) & 0xFF);
+                commandArrayc[commOffSet++] = (byte)((cfgBuf[1] >> 24) & 0xFF);
+                commandArrayc[commOffSet++] = KONST._JT2_WAIT_PE_RESP;
+                startAddress += 4;
+                Pk2.writeUSB(commandArrayc);
+
+                commOffSet = 0;
+                commandArrayc[commOffSet++] = KONST.CLR_UPLOAD_BUFFER;
+                commandArrayc[commOffSet++] = KONST.EXECUTE_SCRIPT;
+                commandArrayc[commOffSet++] = 36;
+                commandArrayc[commOffSet++] = KONST._JT2_SENDCMD;
+                commandArrayc[commOffSet++] = 0x0E;                 // ETAP_FASTDATA
+                commandArrayc[commOffSet++] = KONST._JT2_XFRFASTDAT_LIT;
+                commandArrayc[commOffSet++] = 0x00;
+                commandArrayc[commOffSet++] = 0x00;
+                commandArrayc[commOffSet++] = 0x03;     // WORD_PROGRAM
+                commandArrayc[commOffSet++] = 0x00;
+                commandArrayc[commOffSet++] = KONST._JT2_XFRFASTDAT_LIT;
+                commandArrayc[commOffSet++] = (byte)(startAddress & 0xFF);
+                commandArrayc[commOffSet++] = (byte)((startAddress >> 8) & 0xFF);
+                commandArrayc[commOffSet++] = (byte)((startAddress >> 16) & 0xFF);
+                commandArrayc[commOffSet++] = (byte)((startAddress >> 24) & 0xFF);
+                commandArrayc[commOffSet++] = KONST._JT2_XFRFASTDAT_LIT;
+                commandArrayc[commOffSet++] = (byte)(cfgBuf[2] & 0xFF);
+                commandArrayc[commOffSet++] = (byte)((cfgBuf[2] >> 8) & 0xFF);
+                commandArrayc[commOffSet++] = (byte)((cfgBuf[2] >> 16) & 0xFF);
+                commandArrayc[commOffSet++] = (byte)((cfgBuf[2] >> 24) & 0xFF);
+                commandArrayc[commOffSet++] = KONST._JT2_WAIT_PE_RESP;
+                startAddress += 4;
+                commandArrayc[commOffSet++] = KONST._JT2_SENDCMD;
+                commandArrayc[commOffSet++] = 0x0E;                 // ETAP_FASTDATA
+                commandArrayc[commOffSet++] = KONST._JT2_XFRFASTDAT_LIT;
+                commandArrayc[commOffSet++] = 0x00;
+                commandArrayc[commOffSet++] = 0x00;
+                commandArrayc[commOffSet++] = 0x03;     // WORD_PROGRAM
+                commandArrayc[commOffSet++] = 0x00;
+                commandArrayc[commOffSet++] = KONST._JT2_XFRFASTDAT_LIT;
+                commandArrayc[commOffSet++] = (byte)(startAddress & 0xFF);
+                commandArrayc[commOffSet++] = (byte)((startAddress >> 8) & 0xFF);
+                commandArrayc[commOffSet++] = (byte)((startAddress >> 16) & 0xFF);
+                commandArrayc[commOffSet++] = (byte)((startAddress >> 24) & 0xFF);
+                commandArrayc[commOffSet++] = KONST._JT2_XFRFASTDAT_LIT;
+                commandArrayc[commOffSet++] = (byte)(cfgBuf[3] & 0xFF);
+                commandArrayc[commOffSet++] = (byte)((cfgBuf[3] >> 8) & 0xFF);
+                commandArrayc[commOffSet++] = (byte)((cfgBuf[3] >> 16) & 0xFF);
+                commandArrayc[commOffSet++] = (byte)((cfgBuf[3] >> 24) & 0xFF);
+                commandArrayc[commOffSet++] = KONST._JT2_WAIT_PE_RESP;
+                startAddress += 4;
+                Pk2.writeUSB(commandArrayc);
             }
-            else
-            {
-                cfgBuf[0] |= ((Pk2.DeviceBuffers.ConfigWords[1] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[1]) << 16);
-                cfgBuf[0] |= ((~(uint)Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[1] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigBlank[1]) << 16);
 
-                cfgBuf[1] = (Pk2.DeviceBuffers.ConfigWords[2] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[2]) | ((Pk2.DeviceBuffers.ConfigWords[3] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[3]) << 16);
-                cfgBuf[1] |= (~(uint)Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[2] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigBlank[2])
-                            | ((~(uint)Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[3] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigBlank[3]) << 16);
-
-                cfgBuf[2] = (Pk2.DeviceBuffers.ConfigWords[4] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[4]) | ((Pk2.DeviceBuffers.ConfigWords[5] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[5]) << 16);
-                cfgBuf[2] |= (~(uint)Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[4] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigBlank[4])
-                            | ((~(uint)Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[5] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigBlank[5]) << 16);
-
-                cfgBuf[3] = (Pk2.DeviceBuffers.ConfigWords[6] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[6]) | ((Pk2.DeviceBuffers.ConfigWords[7] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[7]) << 16);
-                cfgBuf[3] |= (~(uint)Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[6] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigBlank[6])
-                            | ((~(uint)Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[7] & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigBlank[7]) << 16);
-
-            }
-
-            if (codeProtect)
-            {
-                cfgBuf[3] &= ~((uint)Pk2.DevFile.PartsList[Pk2.ActivePart].CPMask << 16);
-            }
-
-            uint startAddress = KONST.P32_BOOT_FLASH_START_ADDR + (uint)(bootMemP32 * 4);
-
-            byte[] commandArrayc = new byte[39];
-            commOffSet = 0;
-            commandArrayc[commOffSet++] = KONST.CLR_UPLOAD_BUFFER;
-            commandArrayc[commOffSet++] = KONST.EXECUTE_SCRIPT;
-            commandArrayc[commOffSet++] = 36;
-            commandArrayc[commOffSet++] = KONST._JT2_SENDCMD;
-            commandArrayc[commOffSet++] = 0x0E;                 // ETAP_FASTDATA
-            commandArrayc[commOffSet++] = KONST._JT2_XFRFASTDAT_LIT;
-            commandArrayc[commOffSet++] = 0x00;
-            commandArrayc[commOffSet++] = 0x00;
-            commandArrayc[commOffSet++] = 0x03;     // WORD_PROGRAM
-            commandArrayc[commOffSet++] = 0x00;
-            commandArrayc[commOffSet++] = KONST._JT2_XFRFASTDAT_LIT;
-            commandArrayc[commOffSet++] = (byte)(startAddress & 0xFF);
-            commandArrayc[commOffSet++] = (byte)((startAddress >> 8) & 0xFF);
-            commandArrayc[commOffSet++] = (byte)((startAddress >> 16) & 0xFF);
-            commandArrayc[commOffSet++] = (byte)((startAddress >> 24) & 0xFF);
-            commandArrayc[commOffSet++] = KONST._JT2_XFRFASTDAT_LIT;
-            commandArrayc[commOffSet++] = (byte)(cfgBuf[0] & 0xFF);
-            commandArrayc[commOffSet++] = (byte)((cfgBuf[0] >> 8) & 0xFF);
-            commandArrayc[commOffSet++] = (byte)((cfgBuf[0] >> 16) & 0xFF);
-            commandArrayc[commOffSet++] = (byte)((cfgBuf[0] >> 24) & 0xFF);
-            commandArrayc[commOffSet++] = KONST._JT2_WAIT_PE_RESP;
-            startAddress += 4;
-            commandArrayc[commOffSet++] = KONST._JT2_SENDCMD;
-            commandArrayc[commOffSet++] = 0x0E;                 // ETAP_FASTDATA
-            commandArrayc[commOffSet++] = KONST._JT2_XFRFASTDAT_LIT;
-            commandArrayc[commOffSet++] = 0x00;
-            commandArrayc[commOffSet++] = 0x00;
-            commandArrayc[commOffSet++] = 0x03;     // WORD_PROGRAM
-            commandArrayc[commOffSet++] = 0x00;
-            commandArrayc[commOffSet++] = KONST._JT2_XFRFASTDAT_LIT;
-            commandArrayc[commOffSet++] = (byte)(startAddress & 0xFF);
-            commandArrayc[commOffSet++] = (byte)((startAddress >> 8) & 0xFF);
-            commandArrayc[commOffSet++] = (byte)((startAddress >> 16) & 0xFF);
-            commandArrayc[commOffSet++] = (byte)((startAddress >> 24) & 0xFF);
-            commandArrayc[commOffSet++] = KONST._JT2_XFRFASTDAT_LIT;
-            commandArrayc[commOffSet++] = (byte)(cfgBuf[1] & 0xFF);
-            commandArrayc[commOffSet++] = (byte)((cfgBuf[1] >> 8) & 0xFF);
-            commandArrayc[commOffSet++] = (byte)((cfgBuf[1] >> 16) & 0xFF);
-            commandArrayc[commOffSet++] = (byte)((cfgBuf[1] >> 24) & 0xFF);
-            commandArrayc[commOffSet++] = KONST._JT2_WAIT_PE_RESP;
-            startAddress += 4;
-            Pk2.writeUSB(commandArrayc);
-
-            commOffSet = 0;
-            commandArrayc[commOffSet++] = KONST.CLR_UPLOAD_BUFFER;
-            commandArrayc[commOffSet++] = KONST.EXECUTE_SCRIPT;
-            commandArrayc[commOffSet++] = 36;
-            commandArrayc[commOffSet++] = KONST._JT2_SENDCMD;
-            commandArrayc[commOffSet++] = 0x0E;                 // ETAP_FASTDATA
-            commandArrayc[commOffSet++] = KONST._JT2_XFRFASTDAT_LIT;
-            commandArrayc[commOffSet++] = 0x00;
-            commandArrayc[commOffSet++] = 0x00;
-            commandArrayc[commOffSet++] = 0x03;     // WORD_PROGRAM
-            commandArrayc[commOffSet++] = 0x00;
-            commandArrayc[commOffSet++] = KONST._JT2_XFRFASTDAT_LIT;
-            commandArrayc[commOffSet++] = (byte)(startAddress & 0xFF);
-            commandArrayc[commOffSet++] = (byte)((startAddress >> 8) & 0xFF);
-            commandArrayc[commOffSet++] = (byte)((startAddress >> 16) & 0xFF);
-            commandArrayc[commOffSet++] = (byte)((startAddress >> 24) & 0xFF);
-            commandArrayc[commOffSet++] = KONST._JT2_XFRFASTDAT_LIT;
-            commandArrayc[commOffSet++] = (byte)(cfgBuf[2] & 0xFF);
-            commandArrayc[commOffSet++] = (byte)((cfgBuf[2] >> 8) & 0xFF);
-            commandArrayc[commOffSet++] = (byte)((cfgBuf[2] >> 16) & 0xFF);
-            commandArrayc[commOffSet++] = (byte)((cfgBuf[2] >> 24) & 0xFF);
-            commandArrayc[commOffSet++] = KONST._JT2_WAIT_PE_RESP;
-            startAddress += 4;
-            commandArrayc[commOffSet++] = KONST._JT2_SENDCMD;
-            commandArrayc[commOffSet++] = 0x0E;                 // ETAP_FASTDATA
-            commandArrayc[commOffSet++] = KONST._JT2_XFRFASTDAT_LIT;
-            commandArrayc[commOffSet++] = 0x00;
-            commandArrayc[commOffSet++] = 0x00;
-            commandArrayc[commOffSet++] = 0x03;     // WORD_PROGRAM
-            commandArrayc[commOffSet++] = 0x00;
-            commandArrayc[commOffSet++] = KONST._JT2_XFRFASTDAT_LIT;
-            commandArrayc[commOffSet++] = (byte)(startAddress & 0xFF);
-            commandArrayc[commOffSet++] = (byte)((startAddress >> 8) & 0xFF);
-            commandArrayc[commOffSet++] = (byte)((startAddress >> 16) & 0xFF);
-            commandArrayc[commOffSet++] = (byte)((startAddress >> 24) & 0xFF);
-            commandArrayc[commOffSet++] = KONST._JT2_XFRFASTDAT_LIT;
-            commandArrayc[commOffSet++] = (byte)(cfgBuf[3] & 0xFF);
-            commandArrayc[commOffSet++] = (byte)((cfgBuf[3] >> 8) & 0xFF);
-            commandArrayc[commOffSet++] = (byte)((cfgBuf[3] >> 16) & 0xFF);
-            commandArrayc[commOffSet++] = (byte)((cfgBuf[3] >> 24) & 0xFF);
-            commandArrayc[commOffSet++] = KONST._JT2_WAIT_PE_RESP;
-            startAddress += 4;
-            Pk2.writeUSB(commandArrayc);
-
-            if (verifyWrite)
+            if (verifyWrite && !FormPICkit2.stopOperation)
             {
                 return P32Verify(true, codeProtect);
+            }
+
+            if (!FormPICkit2.stopOperation)
+            {
+                statusWinText += " Done.";
+                UpdateStatusWinText(statusWinText);
             }
 
             Pk2.RunScript(KONST.PROG_EXIT, 1);
@@ -1548,6 +1647,7 @@ namespace PICkit2V2
                 else
                 {
                     statusWinText = "Verify of Program Flash Failed.";
+                    statusWinText += string.Format("\nexpected CRC 0x{0:X4}, got 0x{1:X4}", bufferCRC, deviceCRC);
                     UpdateStatusWinText(statusWinText);
                 }
 

@@ -745,7 +745,13 @@ using Pk3h = PICkit2V2.PK3Helpers;
 //          the first prog.entry.
 // Bug Fix: Fix displaying of PIC32 Program Flash and Boot Flash labels in single
 //          window view. Were broken since 3.27.04.
-
+//
+// version 3.28.03 - 15 Oct 2025 JAKA
+// Bug Fix: Fix PIC32MX false verify error with some devices. Was broken since 3.26.05
+//          (USB was timeouting before PE checksum calculation finished)
+// Bug Fix: Stop button was not working when writing or reading PIC32MX devices
+// Feature: Support blank skipping when writing PIC32MX devices
+// Bug Fix: Update Source field with PIC32MX devices correctly
 
 
 namespace PICkit2V2
@@ -3355,7 +3361,8 @@ namespace PICkit2V2
 				if (checkBoxProgMemEnabled.Checked)
 				{
 					Pk2.DeviceBuffers.ClearProgramMemory(Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue);
-					Pk2.DeviceBuffers.ClearConfigWords(Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigBlank);
+					Pk2.DeviceBuffers.ClearConfigWords(Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigBlank,
+														Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue);
 					Pk2.DeviceBuffers.ClearUserIDs(Pk2.DevFile.Families[Pk2.GetActiveFamily()].UserIDBytes,
 													Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue);
 				}
@@ -3603,11 +3610,12 @@ namespace PICkit2V2
 					semiEnableGUIControls();
 					statusWindowColor = Constants.StatusColor.yellow;
 					displayStatusWindow.Text = "No device detected.";
+					//displayStatusWindow.Text += " (ID=" + string.Format("{0:X8}", Pk2.LastDeviceID) + ")";
 					if (Pk2.DevFile.Families[family].Vpp < 1 && Pk2.DevFile.Families[family].BlankValue != 0xFF)
 					{// PIC18J, PIC24, dsPIC33, PIC32, but not SPI FLASH
 					 // remind about VCAP
 						displayStatusWindow.Text += "\nEnsure proper capacitance on VDDCORE/VCAP pin.";
-					}
+					}	
 					checkForPowerErrors();
 					updateGUI(KONST.DontUpdateMemDisplays, updateGuiControls, KONST.DontUpdateProtections);
 					return false;
@@ -3621,6 +3629,7 @@ namespace PICkit2V2
 					if ((Pk2.LastDeviceID == 0) || (Pk2.LastDeviceID == Pk2.DevFile.Families[family].DeviceIDMask))
 					{
 						displayStatusWindow.Text = "No device detected.";
+						//displayStatusWindow.Text += " (ID=" + string.Format("{0:X4}", Pk2.LastDeviceID) + ")";
 						if (Pk2.DevFile.PartsList[Pk2.ActivePart].LVPScript > 0)
 						{
 							string scriptname = Pk2.DevFile.Scripts[Pk2.DevFile.PartsList[Pk2.ActivePart].LVPScript - 1].ScriptName;
@@ -3745,7 +3754,15 @@ namespace PICkit2V2
 			{
 				if (P32.PIC32Read())
 				{
-					statusWindowColor = Constants.StatusColor.normal;
+					if (stopOperation)
+                    {
+						statusWindowColor = Constants.StatusColor.yellow;
+					}
+                    else
+                    {
+						statusWindowColor = Constants.StatusColor.normal;
+					}
+					displayDataSource.Text = bufferSource;
 				}
 				else
 				{
@@ -4476,16 +4493,26 @@ namespace PICkit2V2
 									Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigBlank[0] | orMask;
 						for (int cfg = 1; cfg < configWords; cfg++)
 						{
-							Pk2.DeviceBuffers.ProgramMemory[configLocation + 6 + cfg * 2] =
+							if (cfg < 9)
+                            {
+								Pk2.DeviceBuffers.ProgramMemory[configLocation + 6 + cfg * 2] =
 									Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigBlank[cfg] | orMask;
+							}
+							/*else
+                            {
+								Pk2.DeviceBuffers.ProgramMemory[configLocation + 6 + cfg * 2] = 0xFFFFFF;
+							}*/
 						}
 					}
 					else
 					{
 						for (int cfg = 0; cfg < configWords; cfg++)
 						{
-							Pk2.DeviceBuffers.ProgramMemory[configLocation + cfg] =
-									Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigBlank[cfg] | orMask;
+							if (cfg < 9)
+							{
+								Pk2.DeviceBuffers.ProgramMemory[configLocation + cfg] =
+										Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigBlank[cfg] | orMask;
+							}
 						}
 					}
 					writeConfigInsideProgramMem();
@@ -4673,20 +4700,23 @@ namespace PICkit2V2
 
 			if (Pk2.FamilyIsPIC32())
 			{
-				if (P32.P32Write(verifyOnWriteToolStripMenuItem.Checked, enableCodeProtectToolStripMenuItem.Checked))
+				bool P32ProgSuccess = P32.P32Write(verifyOnWriteToolStripMenuItem.Checked, enableCodeProtectToolStripMenuItem.Checked, skipBlankSectionsToolStripMenuItem.Checked);
+				if (stopOperation)
+				{
+					statusWindowColor = Constants.StatusColor.yellow;
+					displayStatusWindow.Text = "Programming aborted!\nDevice contents in undefined state!";
+				}
+				else if (P32ProgSuccess)
 				{
 					statusWindowColor = Constants.StatusColor.green;
-					conditionalVDDOff();
-					updateGUI(KONST.UpdateMemoryDisplays, KONST.DontEnableMclrCheckBox, KONST.DontUpdateProtections);
-					return true;
 				}
 				else
 				{
 					statusWindowColor = Constants.StatusColor.red;
-					conditionalVDDOff();
-					updateGUI(KONST.UpdateMemoryDisplays, KONST.DontEnableMclrCheckBox, KONST.DontUpdateProtections);
-					return true;
 				}
+				conditionalVDDOff();
+				updateGUI(KONST.UpdateMemoryDisplays, KONST.DontEnableMclrCheckBox, KONST.DontUpdateProtections);
+				return true;
 			}
 
 			Pk2.SetMCLRTemp(true);     // assert /MCLR to prevent code execution before programming mode entered.
@@ -5872,22 +5902,28 @@ namespace PICkit2V2
 
 					for (int i = 1; i < configWords; i++)
 					{
-						template = blankDevice.ProgramMemory[configLocation + 6 + i * 2] & 0xFFFF0000;
-						blankDevice.ProgramMemory[configLocation + 6 + i * 2] =
-								(template | Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigBlank[i]);
+						if (i < 9)
+						{
+							template = blankDevice.ProgramMemory[configLocation + 6 + i * 2] & 0xFFFF0000;
+							blankDevice.ProgramMemory[configLocation + 6 + i * 2] =
+									(template | Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigBlank[i]);
+						}
 					}
 				}
 				else
 				{
 					for (int i = 0; i < configWords; i++)
 					{
-						uint template = blankDevice.ProgramMemory[configLocation + i] & 0xFFFF0000;
-						if (Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue == 0xFFFF)
+						if (i < 9)
 						{
-							template |= 0xF000;
+							uint template = blankDevice.ProgramMemory[configLocation + i] & 0xFFFF0000;
+							if (Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue == 0xFFFF)
+							{
+								template |= 0xF000;
+							}
+							blankDevice.ProgramMemory[configLocation + i] =
+									(template | Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigBlank[i]);
 						}
-						blankDevice.ProgramMemory[configLocation + i] =
-								(template | Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigBlank[i]);
 					}
 				}
 			}
@@ -6582,20 +6618,25 @@ namespace PICkit2V2
 
 			if (Pk2.FamilyIsPIC32())
 			{
-				if (P32.P32Verify(writeVerify, enableCodeProtectToolStripMenuItem.Checked))
+				bool P32ProgSuccess = P32.P32Verify(writeVerify, enableCodeProtectToolStripMenuItem.Checked);
+				/*if (stopOperation)
+                {
+					statusWindowColor = Constants.StatusColor.yellow;
+					displayStatusWindow.Text = "Verify aborted!";
+				}
+				else*/
+				if (P32ProgSuccess)
 				{
 					statusWindowColor = Constants.StatusColor.green;
-					conditionalVDDOff();
-					updateGUI(KONST.UpdateMemoryDisplays, KONST.DontEnableMclrCheckBox, KONST.DontUpdateProtections);
-					return true;
 				}
 				else
 				{
 					statusWindowColor = Constants.StatusColor.red;
-					conditionalVDDOff();
-					updateGUI(KONST.UpdateMemoryDisplays, KONST.DontEnableMclrCheckBox, KONST.DontUpdateProtections);
-					return true;
 				}
+				conditionalVDDOff();
+				updateGUI(KONST.UpdateMemoryDisplays, KONST.DontEnableMclrCheckBox, KONST.DontUpdateProtections);
+				return true;
+
 			}
 
 			displayStatusWindow.Text = "Verifying Device:\n";

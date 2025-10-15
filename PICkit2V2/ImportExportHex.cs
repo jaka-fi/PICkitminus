@@ -50,10 +50,10 @@ namespace PICkit2V2
                     {
                         Pk2.DeviceBuffers.ConfigWords[cw] = Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue;
                     }
-                    if (Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[cw] == 0)
-                        configLoaded[cw] = true;  // if mask is blank (no implemented bits) don't need it in file
-                    else if (cw > 8)
+                    if (cw > 8)
                         configLoaded[cw] = true;  // don't warn about configs above config9, since we can't set blank mask for those
+                    else if (Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[cw] == 0)
+                        configLoaded[cw] = true;  // if mask is blank (no implemented bits) don't need it in file
                     else
                         configLoaded[cw] = false; // implemented bits, so warn if not in hex file.
                 }
@@ -66,11 +66,20 @@ namespace PICkit2V2
                     bootMemStart = Pk2.GetAuxFlashAddress();
                     progMemSizeBytes -= (int)bootMemSize * bytesPerWord;
                 }
-                if (Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue > 0xFFFFFF)
+                //if (Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue > 0xFFFFFF)
+                if (Pk2.FamilyIsPIC32())
                 { // PIC32
                     programMemStart = Constants.P32_PROGRAM_FLASH_START_ADDR;
                     bootMemStart = Constants.P32_BOOT_FLASH_START_ADDR;
                     progMemSizeBytes -= (int)bootMemSize * bytesPerWord;
+                    progMemSizeBytes += (int)programMemStart;
+                    cfgBytesPerWord = 2;
+                }
+                if (Pk2.FamilyIsdsPIC33AK())
+                { // dsPIC33AK
+                    programMemStart = Constants.P33AK_PROGRAM_FLASH_START_ADDR;
+                    //bootMemStart = Constants.P32_BOOT_FLASH_START_ADDR;
+                    //progMemSizeBytes -= (int)bootMemSize * bytesPerWord;
                     progMemSizeBytes += (int)programMemStart;
                     cfgBytesPerWord = 2;
                 }
@@ -208,7 +217,7 @@ namespace PICkit2V2
                                                     { // baseline, set OR mask bits
                                                         Pk2.DeviceBuffers.ConfigWords[configNum] |= Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[5];
                                                     }
-                                                    if (byteAddress < progMemSizeBytes)
+                                                    if (byteAddress < progMemSizeBytes && !Pk2.FamilyIsdsPIC33AK())
                                                     { // also mask off the word if in program memory.
                                                         uint orMask = 0;
                                                         if (Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue == 0xFFFF)
@@ -217,12 +226,26 @@ namespace PICkit2V2
                                                         }
                                                         else
                                                         { // PIC24 is currently only other case of config in program mem
-                                                            orMask = (uint)(0xFF0000 | (Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigBlank[configNum]
-                                                                & ~Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[configNum]));
+                                                            if (configNum < 9)
+                                                            {
+                                                                orMask = (uint)(0xFF0000 | (Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigBlank[configNum]
+                                                                    & ~Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[configNum]));
+                                                            }
+                                                            else
+                                                            {
+                                                                orMask = 0xFFFFFF;
+                                                            }
                                                         }
-                                                        Pk2.DeviceBuffers.ProgramMemory[arrayAddress] &=
-                                                            //       wordByte;
-                                                            (wordByte & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigBlank[configNum]); // add byte.
+                                                        if (configNum < 9)
+                                                        {
+                                                            Pk2.DeviceBuffers.ProgramMemory[arrayAddress] &=
+                                                                //       wordByte;
+                                                                (wordByte & Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigBlank[configNum]); // add byte.
+                                                        }
+                                                        else
+                                                        {
+                                                            Pk2.DeviceBuffers.ProgramMemory[arrayAddress] &= wordByte;
+                                                        }
 
                                                         Pk2.DeviceBuffers.ProgramMemory[arrayAddress] |= orMask;
                                                     }
@@ -433,12 +456,19 @@ namespace PICkit2V2
             // Program Memory ----------------------------------------------------------------------------
             int fileSegment = 0;
             int fileAddress = 0;  
-            int programEnd = Pk2.DeviceBuffers.ProgramMemory.Length;          
-            if (Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue > 0xFFFFFF)
+            int programEnd = Pk2.DeviceBuffers.ProgramMemory.Length;
+            //if (Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue > 0xFFFFFF)
+            if (Pk2.FamilyIsPIC32())
             { // PIC32
                 fileSegment = (int)(Constants.P32_PROGRAM_FLASH_START_ADDR >> 16);
                 fileAddress = (int)(Constants.P32_PROGRAM_FLASH_START_ADDR & 0xFFFF);
                 programEnd -= (int)Pk2.DevFile.PartsList[Pk2.ActivePart].BootFlash;
+            }
+            if (Pk2.FamilyIsdsPIC33AK())
+            { // PIC32
+                fileSegment = (int)(Constants.P33AK_PROGRAM_FLASH_START_ADDR >> 16);
+                fileAddress = (int)(Constants.P33AK_PROGRAM_FLASH_START_ADDR & 0xFFFF);
+                programEnd -= (int)(Constants.P33AK_PROGRAM_FLASH_START_ADDR + Pk2.DevFile.PartsList[Pk2.ActivePart].ProgramMem);
             }
 
             if (Pk2.PartHasAuxFlash())

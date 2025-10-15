@@ -33,7 +33,7 @@ namespace PICkit2V2
             ClearEEPromMemory(eeBytes, memBlankVal);
 
             //init configuration to blank
-            ClearConfigWords(configBlank);
+            ClearConfigWords(configBlank, memBlankVal);
             
             //init user ids to blank
             ClearUserIDs(idBytes, memBlankVal);
@@ -67,14 +67,22 @@ namespace PICkit2V2
         }
 
 
-        public void ClearConfigWords(ushort[] configBlank)
+        public void ClearConfigWords(ushort[] configBlank, uint deviceBlank)
         {
             if (ConfigWords.Length > 0)
             {
                 //init configuration to blank
                 for (int i = 0; i < ConfigWords.Length; i++)
                 {
-                    ConfigWords[i] = configBlank[i];
+                    if (i < 9)
+                    {
+                        ConfigWords[i] = configBlank[i];
+                    }
+                    else
+                    {
+                        ConfigWords[i] = deviceBlank;
+                    }
+                    
                 }
             }
         }

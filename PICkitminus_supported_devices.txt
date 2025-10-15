@@ -6,8 +6,9 @@ Device file and software updates available from
 http://kair.us/projects/pickitminus/index.html
 
 
-Device File Version:   2.64.33
-Number of devices = 1588
+
+Device File Version:   2.64.36
+Number of devices = 1594
 
 Device Name                  Device Family               Device ID
 -----------                  -------------               ---------
@@ -641,7 +642,7 @@ PIC18F57K42                  PIC18/PIC18F MSB1st         0x00006B80
 PIC18F57Q43                  PIC18/PIC18F MSB1st         0x000074C0
 PIC18F57Q83                  PIC18/PIC18F MSB1st         0x0000990B
 PIC18F57Q84                  PIC18/PIC18F MSB1st         0x00009905
-PIC18F65K40                  PIC18/PIC18F MSB1st         0x00006800
+PIC18F65K40                  PIC18/PIC18F MSB1st         0x00006B00
 PIC18F66K40                  PIC18/PIC18F MSB1st         0x00006AE0
 PIC18F67K40                  PIC18/PIC18F MSB1st         0x00006AC0
 PIC18LF24K40                 PIC18/PIC18F MSB1st         0x00006AA0
@@ -1155,8 +1156,8 @@ PIC24EP512GP202              Others/PIC24EP              0x00001799
 PIC24EP512GP204              Others/PIC24EP              0x00001798
 PIC24EP512GP206              Others/PIC24EP              0x0000179B
 PIC24EP512GP806              Others/PIC24EP              0x0000183D
-PIC24EP512GP810              Others/PIC24EP              0x00001836
-PIC24EP512GP814              Others/PIC24EP              0x00001837
+PIC24EP512GU810              Others/PIC24EP              0x00001836
+PIC24EP512GU814              Others/PIC24EP              0x00001837
 PIC24EP512MC202              Others/PIC24EP              0x00001791
 PIC24EP512MC204              Others/PIC24EP              0x00001790
 PIC24EP512MC206              Others/PIC24EP              0x00001793
@@ -1230,6 +1231,9 @@ DSPIC33FJ256MC510            Others/dsPIC33              0x000000B7
 DSPIC33FJ256MC510A           Others/dsPIC33              0x000007B7
 DSPIC33FJ256MC710            Others/dsPIC33              0x000000BF
 DSPIC33FJ256MC710A           Others/dsPIC33              0x000007BF
+DSPIC33CK32MC102             Others/dsPIC33CK            0x00009900
+DSPIC33CK32MC103             Others/dsPIC33CK            0x00009901
+DSPIC33CK32MC105             Others/dsPIC33CK            0x00009902
 DSPIC33CK32MP202             Others/dsPIC33CK            0x00007C00
 DSPIC33CK32MP203             Others/dsPIC33CK            0x00007C01
 DSPIC33CK32MP205             Others/dsPIC33CK            0x00007C02
@@ -1238,6 +1242,9 @@ DSPIC33CK32MP502             Others/dsPIC33CK            0x00007C40
 DSPIC33CK32MP503             Others/dsPIC33CK            0x00007C41
 DSPIC33CK32MP505             Others/dsPIC33CK            0x00007C42
 DSPIC33CK32MP506             Others/dsPIC33CK            0x00007C43
+DSPIC33CK64MC102             Others/dsPIC33CK            0x00009910
+DSPIC33CK64MC103             Others/dsPIC33CK            0x00009911
+DSPIC33CK64MC105             Others/dsPIC33CK            0x00009912
 DSPIC33CK64MP202             Others/dsPIC33CK            0x00007C10
 DSPIC33CK64MP203             Others/dsPIC33CK            0x00007C11
 DSPIC33CK64MP205             Others/dsPIC33CK            0x00007C12
@@ -1606,3 +1613,5 @@ NOTE: If the name contains a space with additional info in parentheses, Ex:
       then only the characters before the space are required for -P, Ex:
         -pPIC16F636
         -p93LC46A
+
+Operation Succeeded

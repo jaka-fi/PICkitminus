@@ -1,12 +1,9 @@
-12. Jun 2025
+15. Oct 2025
 Release Notes for PICkitminus Microcontroller Programmer
-PICkitminus V3.28.00
-Device File V2.64.33
+PICkitminus V3.28.03
+Device File V2.64.36
 
-Number of supported devices: 1588
-
-This release comes with new PICkit firmware V2.32.02
-It adds commands needed for some PIC24/33EP families
+Number of supported devices: 1594
 
 KNOWN ISSUES / LIMITATIONS
 - Programmer-to-Go not supported for PIC24/dsPIC33 parts with
