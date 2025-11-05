@@ -752,6 +752,9 @@ using Pk3h = PICkit2V2.PK3Helpers;
 // Bug Fix: Stop button was not working when writing or reading PIC32MX devices
 // Feature: Support blank skipping when writing PIC32MX devices
 // Bug Fix: Update Source field with PIC32MX devices correctly
+//
+// version 3.28.04 - 5 Nov 2025 JAKA
+// Bug Fix: Fix writing last config word on PIC18F and PIC18F_K if WRTC bit is enabled
 
 
 namespace PICkit2V2
@@ -5550,8 +5553,8 @@ namespace PICkit2V2
 					// and look for WRTC = 0.  If found, write config words once with CONFIG6 = 0xFFFF
 					// then re-write it with the correct value.
 
-					if ((Pk2.DevFile.Families[Pk2.GetActiveFamily()].FamilyName == "PIC18F") ||
-						(Pk2.DevFile.Families[Pk2.GetActiveFamily()].FamilyName == "PIC18F_K_"))
+					if ((Pk2.DevFile.Families[Pk2.GetActiveFamily()].FamilyName == "PIC18/PIC18F") ||
+						(Pk2.DevFile.Families[Pk2.GetActiveFamily()].FamilyName == "PIC18/PIC18F_K_"))
 					{
 						if (Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigWords > 5)
 						{ // don't blow up if part doesn't have enough config words
@@ -5571,7 +5574,7 @@ namespace PICkit2V2
 
 					//Adjust for some PIC18F masked config bits that remain set.
 					// if (Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue == 0xFFFF)
-					if (Pk2.DevFile.Families[Pk2.GetActiveFamily()].FamilyName == "PIC18F") // JAKA: Use this only for the 'original' 18F family. Other 18F devices can contain over 7 config words and this will fail.
+					if (Pk2.DevFile.Families[Pk2.GetActiveFamily()].FamilyName == "PIC18/PIC18F") // JAKA: Use this only for the 'original' 18F family. Other 18F devices can contain over 7 config words and this will fail.
 					{
 						checksumPk2Go += Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[7];
 					}
