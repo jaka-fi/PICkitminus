@@ -753,8 +753,9 @@ using Pk3h = PICkit2V2.PK3Helpers;
 // Feature: Support blank skipping when writing PIC32MX devices
 // Bug Fix: Update Source field with PIC32MX devices correctly
 //
-// version 3.28.04 - 5 Nov 2025 JAKA
-// Bug Fix: Fix writing last config word on PIC18F and PIC18F_K if WRTC bit is enabled
+// version 3.28.04 - 9 Nov 2025 JAKA
+// Bug Fix: Fix writing last config word on PIC18F, PIC18F_K and PIC18F_K90_K80_K22
+//          families if WRTC bit is enabled
 
 
 namespace PICkit2V2
@@ -5554,7 +5555,8 @@ namespace PICkit2V2
 					// then re-write it with the correct value.
 
 					if ((Pk2.DevFile.Families[Pk2.GetActiveFamily()].FamilyName == "PIC18/PIC18F") ||
-						(Pk2.DevFile.Families[Pk2.GetActiveFamily()].FamilyName == "PIC18/PIC18F_K_"))
+						(Pk2.DevFile.Families[Pk2.GetActiveFamily()].FamilyName == "PIC18/PIC18F_K_") ||
+						(Pk2.DevFile.Families[Pk2.GetActiveFamily()].FamilyName == "PIC18/PIC18F_K90_K80_K22"))
 					{
 						if (Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigWords > 5)
 						{ // don't blow up if part doesn't have enough config words
