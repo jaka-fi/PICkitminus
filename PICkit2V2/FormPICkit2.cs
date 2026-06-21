@@ -863,8 +863,17 @@ namespace PICkit2V2
 
 		[DllImport("user32.dll")]
 		static extern Int16 FlashWindowEx(ref FLASHWINFO pwfi);
-		[DllImport("user32.dll")]
-		public static extern void DisableProcessWindowsGhosting();      // 22.7.2021, v3.20.05 JAKA
+		[DllImport("user32.dll", EntryPoint = "DisableProcessWindowsGhosting")]
+		static extern void NativeDisableProcessWindowsGhosting();      // 22.7.2021, v3.20.05 JAKA
+
+		// user32.dll exists only on Windows; the native export is absent under Mono on
+		// other platforms, where window ghosting does not occur, so skip the call there
+		public static void DisableProcessWindowsGhosting()
+		{
+			if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+				return;
+			NativeDisableProcessWindowsGhosting();
+		}
 
 		// Start flush mouse events code
 		[StructLayout(LayoutKind.Sequential)]

@@ -49,6 +49,30 @@ PKOB operation has been tested with the following development boards:
 
 Please Note that all new devboards have PKOB4 or some other solution, those are not supported. Also many older boards have been updated to new revision. For example Curiosity HPC board (DM164136) originally had PKOB (based on PICkit3), but revision 2 has PKOB4 (based on PICkit4). The easiest way is to look at the microcontroller type on the devboard. If it is PIC24FJ256GB106, it is very likely PKOB, and probably will work.
 
+Building on Linux
+-----------------
+The GUI software builds under Mono. Install Mono together with its build tools; on Red Hat based distributions the `mono-devel` package provides `xbuild`, `mono` and the C# compiler. Debian and Ubuntu ship the same tools in their own `mono-devel` package; where `xbuild` is not present, use `msbuild` instead, which accepts the same arguments shown below.
+
+The project files target the .NET Framework v2.0 profile, which current Mono no longer ships. Build against the installed v4.5 profile instead; the resulting assembly still runs on Mono's v4.0 runtime:
+
+```bash
+xbuild PICkit2V2/PICkitminus.csproj /p:Configuration=Release /p:Platform=x86 /p:TargetFrameworkVersion=v4.5
+```
+
+This produces `PICkit2V2/bin/Release/PICkitminus.exe`. Run it with Mono from a directory that contains the device file `PK2DeviceFile.dat`, which is loaded relative to the working directory:
+
+```bash
+mono PICkit2V2/bin/Release/PICkitminus.exe
+```
+
+See "Running on Linux" below for the hidapi runtime and USB device permissions.
+
+Running on Linux
+----------------
+The GUI software can be built and run on Linux using Mono. It talks to the PICkit2, PICkit3 and PKOB programmers through the cross-platform [hidapi](https://github.com/libusb/hidapi) library, so install the hidapi runtime (for example the `hidapi` or `libhidapi-hidraw` package for your distribution) before running.
+
+If you start the software and get a message that the PICkit 2/3/PKOB is not found, the most probable reason is that a normal user doesn't have proper rights to the USB device. A simple but ugly solution is to run as root. On systems with udev, you can instead use the [60-pickit.rules](https://github.com/jaka-fi/PICkitminus/blob/master/60-pickit.rules) file in this repository, which gives appropriate rights for PICkit2, PICkit3 and PKOB. Just copy this file to /etc/udev/rules.d/ and reload udev (or restart the PC). You will also need to re-plug the PICkit. The rules grant access to the active local-session user automatically through systemd's uaccess tag, and also add the device to the dialout group as a fallback for remote sessions. Note that the plugdev group used on Debian and Ubuntu does not exist on Red Hat based distributions; if you rely on the group fallback, make sure your user belongs to the dialout group.
+
 Downloads
 ---------
 To download this software for Windows, see 'Releases' on right edge of this github page.  &rarr;

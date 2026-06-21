@@ -1,0 +1,15 @@
+# PICkitminus programmers (PICkit2 / PICkit3 / PKOB)
+#
+# hidapi opens the /dev/hidraw* node, so the permission must be set on the
+# hidraw subsystem, not the parent usb device. The Debian/Ubuntu "plugdev"
+# group does not exist on RHEL/Fedora; granting access by that group leaves the
+# node owned by root and unreadable. TAG+="uaccess" lets systemd-logind grant
+# the active local-session user an ACL on the device, and GROUP="dialout" is a
+# fallback for non-seat sessions (eg ssh).
+#
+# PICkit 2
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="04d8", ATTRS{idProduct}=="0033", MODE="0660", GROUP="dialout", TAG+="uaccess"
+# PICkit 3
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="04d8", ATTRS{idProduct}=="900a", MODE="0660", GROUP="dialout", TAG+="uaccess"
+# PKOB
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="04d8", ATTRS{idProduct}=="8107", MODE="0660", GROUP="dialout", TAG+="uaccess"

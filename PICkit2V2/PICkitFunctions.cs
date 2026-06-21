@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using USB = PICkit2V2.USB;
 using KONST = PICkit2V2.Constants;
 using UTIL = PICkit2V2.Utilities;
 using System.IO;
@@ -39,10 +38,8 @@ namespace PICkit2V2
 		public static bool vddErrorDisabled = false;
 		private static IntPtr usbReadHandle = IntPtr.Zero;
 		private static IntPtr usbWriteHandle = IntPtr.Zero;
-		private static IntPtr hEventObject = IntPtr.Zero;
-		private static IntPtr wrhEventObject = IntPtr.Zero;
-		private static Kernel32.OVERLAPPED HIDOverlapped;
-		private static Kernel32.OVERLAPPED HIDWrOverlapped;
+		private static readonly IUsbHidTransport hidTransport = UsbHidFactory.Create();
+		private static string serialUnitID = "";
 		private static ushort lastPk2number = 0xFF;
 		private static int[] familySearchTable; // index is search priority, value is family array index.
 		private static bool vddOn = false;
@@ -1558,15 +1555,15 @@ namespace PICkit2V2
 		public static void DisconnectPICkit2Unit()
 		{
 			if (usbWriteHandle != IntPtr.Zero)
-				USB.CloseHandle(usbWriteHandle);
+				hidTransport.Close(usbWriteHandle);
 			if (usbReadHandle != IntPtr.Zero)
-				USB.CloseHandle(usbReadHandle);
+				hidTransport.Close(usbReadHandle);
 			usbReadHandle = IntPtr.Zero;
 			usbWriteHandle = IntPtr.Zero;
 		}
 		public static string GetSerialUnitID()
 		{
-			return USB.UnitID;
+			return serialUnitID;
 		}
 
 		public static KONST.PICkit2USB DetectPICkit2Device(ushort pk2ID, bool readFW)
@@ -1576,7 +1573,18 @@ namespace PICkit2V2
 
 			DisconnectPICkit2Unit();
 
-			bool result = USB.Find_This_Device(pk2ID, ref usbRdTemp, ref usbWrTemp);
+			Pk2DeviceInfo deviceInfo = hidTransport.FindDevice(pk2ID, out usbRdTemp, out usbWrTemp);
+			bool result = deviceInfo.Found;
+			if (deviceInfo.Found)
+			{
+				isPK3 = deviceInfo.IsPk3;
+				isPKOB = deviceInfo.IsPkob;
+				isPK2M = deviceInfo.IsPk2m;
+				ToolName = deviceInfo.ToolName;
+				serialUnitID = deviceInfo.UnitId;
+				if (deviceInfo.IsPkob)
+					pkobDeviceString = deviceInfo.PkobModel;
+			}
 
 			// If we use this check and keep the old handles, we'll read whatever packets
 			// were read by somebody else looking for pk2 units, messing up communications.
@@ -2754,65 +2762,29 @@ namespace PICkit2V2
             {
 				return false;
             }
-			if (wrhEventObject == IntPtr.Zero)
-			{
-				wrhEventObject = USB.CreateEvent
-					(IntPtr.Zero,
-					true,
-					true,
-					"");
-
-				//Set the members of the overlapped structure.
-				HIDWrOverlapped.hEvent = wrhEventObject;
-				HIDWrOverlapped.Offset = 0;
-				HIDWrOverlapped.OffsetHigh = 0;
-			}
-			uint Result;
-			bool retVal = false;
-
-			int bytesWritten = 0;
-
 			Usb_write_array[0] = 0;                         // first byte must always be zero.        
 			for (int index = 1; index < Usb_write_array.Length; index++)
 			{
 				Usb_write_array[index] = KONST.END_OF_BUFFER;              // init array to all END_OF_BUFFER cmds.
 			}
 			Array.Copy(commandList, 0, Usb_write_array, 1, commandList.Length);
-			Result = USB.WriteFile(usbWriteHandle, Usb_write_array, Usb_write_array.Length, ref bytesWritten, ref HIDWrOverlapped);
-
-			Result = USB.WaitForSingleObject(wrhEventObject, 1000);
-
-			switch (Result)
+			UsbTransferStatus status = hidTransport.Write(usbWriteHandle, Usb_write_array);
+			bool retVal;
+			if (status == UsbTransferStatus.Success)
 			{
-				case KONST.WAIT_OBJECT_0:
-					{
-						retVal = true;
-						break;
-					}
-				case KONST.WAIT_TIMEOUT:
-					{
-						//Cancel the Read operation.
-						//API call: CancelIo
-						//Cancels the ReadFile
-						//		Requires the device handle.
-						//		Returns non-zero on success.
-						
-
-						Result = USB.CancelIo(usbWriteHandle);
-						DisconnectPICkit2Unit();
-						retVal = false;
-						//A timeout may mean that the device has been removed.
-						//Close the device handles and set DeviceDetected = False
-						//so the next access attempt will search for the device.
-						break;
-					}
-				default:
-					{
-						break;
-					}
+				retVal = true;
 			}
-			
-			USB.ResetEvent(wrhEventObject);
+			else if (status == UsbTransferStatus.Timeout)
+			{
+				// A timeout may mean the device has been removed; disconnect so the next
+				// access attempt searches for the device again.
+				DisconnectPICkit2Unit();
+				retVal = false;
+			}
+			else
+			{
+				retVal = false;
+			}
 			return retVal;
 		}
 
@@ -2823,24 +2795,7 @@ namespace PICkit2V2
 			{
 				return false;
 			}
-			int bytesWritten = 0;
 			int commandLength = commandList.Length;
-			uint Result;
-			bool retVal = false;
-
-			if (wrhEventObject == IntPtr.Zero)
-			{
-				wrhEventObject = USB.CreateEvent
-					(IntPtr.Zero,
-					true,
-					true,
-					"");
-
-				//Set the members of the overlapped structure.
-				HIDWrOverlapped.hEvent = wrhEventObject;
-				HIDWrOverlapped.Offset = 0;
-				HIDWrOverlapped.OffsetHigh = 0;
-			}
 
 			Usb_write_array[0] = 0;                         // first byte must always be zero.        
 			for (int index = 1; index < Usb_write_array.Length; index++)
@@ -2855,38 +2810,21 @@ namespace PICkit2V2
 			Usb_write_array[63] = (byte)((commandLength >> 16) & 0xFF);
 			Usb_write_array[64] = (byte)((commandLength >> 24) & 0xFF);
 
-			Result = USB.WriteFile(usbWriteHandle, Usb_write_array, Usb_write_array.Length, ref bytesWritten, ref HIDWrOverlapped);
-
-			Result = USB.WaitForSingleObject(wrhEventObject, 1000);
-
-			switch (Result)
+			UsbTransferStatus status = hidTransport.Write(usbWriteHandle, Usb_write_array);
+			bool retVal;
+			if (status == UsbTransferStatus.Success)
 			{
-				case KONST.WAIT_OBJECT_0:
-					{
-						retVal = true;
-						break;
-					}
-				case KONST.WAIT_TIMEOUT:
-					{
-						//Cancel the Read operation.
-						//API call: CancelIo
-						//Cancels the ReadFile
-						//		Requires the device handle.
-						//		Returns non-zero on success.
-
-
-						Result = USB.CancelIo(usbWriteHandle);
-						DisconnectPICkit2Unit();
-						retVal = false;
-						break;
-					}
-				default:
-					{
-						break;
-					}
+				retVal = true;
 			}
-
-			USB.ResetEvent(wrhEventObject);
+			else if (status == UsbTransferStatus.Timeout)
+			{
+				DisconnectPICkit2Unit();
+				retVal = false;
+			}
+			else
+			{
+				retVal = false;
+			}
 			return retVal;
 		}
 
@@ -2896,58 +2834,22 @@ namespace PICkit2V2
 			{
 				return false;
 			}
-			if (wrhEventObject == IntPtr.Zero)
-			{
-				wrhEventObject = USB.CreateEvent
-					(IntPtr.Zero,
-					true,
-					true,
-					"");
-
-				//Set the members of the overlapped structure.
-				HIDWrOverlapped.hEvent = wrhEventObject;
-				HIDWrOverlapped.Offset = 0;
-				HIDWrOverlapped.OffsetHigh = 0;
-			}
-			uint Result;
-			bool retVal = false;
-
-			int bytesWritten = 0;
-
 			Usb_write_array[0] = 0;                         // first byte must always be zero.        
 			for (int index = 1; index < Usb_write_array.Length; index++)
 			{
 				Usb_write_array[index] = KONST.END_OF_BUFFER;              // init array to all END_OF_BUFFER cmds.
 			}
 			Array.Copy(commandList, 0, Usb_write_array, 1, commandList.Length);
-			Result = USB.WriteFile(usbWriteHandle, Usb_write_array, Usb_write_array.Length, ref bytesWritten, ref HIDWrOverlapped);
-
-			Result = USB.WaitForSingleObject(wrhEventObject, 1000);
-
-			switch (Result)
+			UsbTransferStatus status = hidTransport.Write(usbWriteHandle, Usb_write_array);
+			bool retVal;
+			if (status == UsbTransferStatus.Success)
 			{
-				case KONST.WAIT_OBJECT_0:
-					{
-						retVal = true;
-						break;
-					}
-				case KONST.WAIT_TIMEOUT:
-					{
-						
-						Result = USB.CancelIo(usbWriteHandle);
-						retVal = false;
-						//A timeout may mean that the device has been removed.
-						//Close the device handles and set DeviceDetected = False
-						//so the next access attempt will search for the device.
-						break;
-					}
-				default:
-					{
-						break;
-					}
+				retVal = true;
 			}
-
-			USB.ResetEvent(wrhEventObject);
+			else
+			{
+				retVal = false;
+			}
 			return retVal;
 		}
 
@@ -2957,59 +2859,25 @@ namespace PICkit2V2
 			{
 				return false;
 			}
-			int bytesRead = 0;
-			uint Result;
-			bool retVal = false;
-
-			if (hEventObject == IntPtr.Zero)
-			{
-				hEventObject = USB.CreateEvent
-					(IntPtr.Zero,
-					true,
-					true,
-					"");
-
-				//Set the members of the overlapped structure.
-				HIDOverlapped.hEvent = hEventObject;
-				HIDOverlapped.Offset = 0;
-				HIDOverlapped.OffsetHigh = 0;
-			}
-
 			if (LearnMode)
 				return true;
 
-			Result = USB.ReadFile(usbReadHandle, Usb_read_array, Usb_read_array.Length, ref bytesRead, ref HIDOverlapped);
-
-			Result = USB.WaitForSingleObject(hEventObject, 1000);
-			
-			switch (Result)
+			UsbTransferStatus status = hidTransport.Read(usbReadHandle, Usb_read_array);
+			bool retVal;
+			if (status == UsbTransferStatus.Success)
 			{
-				case KONST.WAIT_OBJECT_0:
-					{
-						retVal = true;
-						break;
-					}
-				case KONST.WAIT_TIMEOUT:
-					{
-						//Cancel the Read operation.
-						//API call: CancelIo
-						//Cancels the ReadFile
-						//		Requires the device handle.
-						//		Returns non-zero on success.
-						
-
-						Result = USB.CancelIo(usbReadHandle);
-						DisconnectPICkit2Unit();	// Disconnect to prevent multiple consecutive timeouts which would 'hang' the UI
-						retVal = false;
-						break;
-					}
-				default:
-					{
-						break;
-					}
+				retVal = true;
 			}
-			
-			USB.ResetEvent(hEventObject);
+			else if (status == UsbTransferStatus.Timeout)
+			{
+				// Disconnect to prevent multiple consecutive timeouts which would 'hang' the UI
+				DisconnectPICkit2Unit();
+				retVal = false;
+			}
+			else
+			{
+				retVal = false;
+			}
 			return retVal;
 		}
 
@@ -3019,51 +2887,19 @@ namespace PICkit2V2
 			{
 				return false;
 			}
-			int bytesRead = 0;
-			uint Result;
-			bool retVal = false;
-
-			if (hEventObject == IntPtr.Zero)
-			{
-				hEventObject = USB.CreateEvent
-					(IntPtr.Zero,
-					true,
-					true,
-					"");
-
-				//Set the members of the overlapped structure.
-				HIDOverlapped.hEvent = hEventObject;
-				HIDOverlapped.Offset = 0;
-				HIDOverlapped.OffsetHigh = 0;
-			}
-
 			if (LearnMode)
 				return true;
 
-			Result = USB.ReadFile(usbReadHandle, Usb_read_array, Usb_read_array.Length, ref bytesRead, ref HIDOverlapped);
-
-			Result = USB.WaitForSingleObject(hEventObject, 1000);
-
-			switch (Result)
+			UsbTransferStatus status = hidTransport.Read(usbReadHandle, Usb_read_array);
+			bool retVal;
+			if (status == UsbTransferStatus.Success)
 			{
-				case KONST.WAIT_OBJECT_0:
-					{
-						retVal = true;
-						break;
-					}
-				case KONST.WAIT_TIMEOUT:
-					{
-						Result = USB.CancelIo(usbReadHandle);
-						retVal = false;
-						break;
-					}
-				default:
-					{
-						break;
-					}
+				retVal = true;
 			}
-
-			USB.ResetEvent(hEventObject);
+			else
+			{
+				retVal = false;
+			}
 			return retVal;
 		}
 

@@ -317,7 +317,11 @@
       <DependentUpon>Settings.settings</DependentUpon>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
     </Compile>
-    <Compile Include="USB.cs" />
+    <Compile Include="UsbHidContract.cs" />
+    <Compile Include="UsbHidWindows.cs" />
+    <Compile Include="HidApiNative.cs" />
+    <Compile Include="UsbHidLinux.cs" />
+    <Compile Include="UsbHidFactory.cs" />
     <Compile Include="Utilities.cs" />
     <Compile Include="DialogVDDErase.cs">
       <SubType>Form</SubType>
