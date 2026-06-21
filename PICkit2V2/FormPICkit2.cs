@@ -1377,13 +1377,17 @@ namespace PICkit2V2
 				pICkit2GoToolStripMenuItem.Visible = true;
 				if (Pk2.isPK2M)
 				{
+					// Mono's file dialog on Linux matches filter globs case-sensitively,
+					// while Windows folds case. The distributed operating system hex files
+					// are named in uppercase, so each filter lists the uppercase prefix
+					// pattern alongside the lowercase one to display them on both platforms.
 					//openFWFile = openFWFilePK2M;
-					openFWFile.Filter = "PK2M 2 OS|pk2mv*.hex|All files|*.*";
+					openFWFile.Filter = "PK2M 2 OS|pk2mv*.hex;PK2MV*.hex|All files|*.*";
 					openFWFile.Title = "Open PK2M Operating System File";
 				}
 				else
 				{
-					openFWFile.Filter = "PICkit 2 OS|pk2v*.hex|All files|*.*";
+					openFWFile.Filter = "PICkit 2 OS|pk2v*.hex;PK2V*.hex|All files|*.*";
 					openFWFile.Title = "Open PICkit 2 Operating System File";
 				}
 
@@ -1419,12 +1423,12 @@ namespace PICkit2V2
 
 				if (!Pk2.isPKOB)
 				{
-					openFWFile.Filter = "PICkit 3 OS|pk3os*.hex|All files|*.*";
+					openFWFile.Filter = "PICkit 3 OS|pk3os*.hex;PK3OS*.hex|All files|*.*";
 					openFWFile.Title = "Open PICkit 3 Operating System File";
 				}
 				else
 				{
-					openFWFile.Filter = "PKOB OS|pk3os*.hex|All files|*.*";
+					openFWFile.Filter = "PKOB OS|pk3os*.hex;PK3OS*.hex|All files|*.*";
 					openFWFile.Title = "Open PKOB Operating System File";
 				}
 			}
