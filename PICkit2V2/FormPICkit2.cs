@@ -7500,7 +7500,11 @@ namespace PICkit2V2
 				displayStatusWindow.BackColor = Color.SteelBlue;
 				this.Update();
 
-				res = Pk3h.WriteProgrammerOs(KONST.BLFileNamePk3, 0x23);
+				// The bootloader hex is a companion of the operating system hex and resides in the
+				// same directory. Resolve it against the selected operating system file's directory
+				// rather than the process working directory.
+				string bootloaderPath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(openFWFile.FileName), KONST.BLFileNamePk3);
+				res = Pk3h.WriteProgrammerOs(bootloaderPath, 0x23);
 
 				//TODO: better way to choose bootloader
 				if (res != KONST.PICkit2USB.bootloader)
