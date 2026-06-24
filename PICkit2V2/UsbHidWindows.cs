@@ -2,15 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Runtime.InteropServices;
-using CONST = PICkit2V2.Constants;
 using KONST = PICkit2V2.Constants;
 
 namespace PICkit2V2
 {
-    public class USB
+    public class UsbHidWindows : IUsbHidTransport
     {
-        public static string UnitID = "";
-    
         private const uint GENERIC_READ = 0x80000000;
         private const uint GENERIC_WRITE = 0x40000000;
         private const uint FILE_SHARE_READ = 0x00000001;
@@ -157,11 +154,17 @@ namespace PICkit2V2
         [DllImport("kernel32.dll")]
         public static extern IntPtr CreateEvent(IntPtr lpEventAttributes, bool bManualReset, bool bInitialState, string lpName);
 
-        public static bool Find_This_Device(ushort p_index,
-                                           ref IntPtr p_ReadHandle,
-                                           ref IntPtr p_WriteHandle)
+        public Pk2DeviceInfo FindDevice(ushort p_index,
+                                        out IntPtr p_ReadHandle,
+                                        out IntPtr p_WriteHandle)
         {
             // Zero based p_index is used to identify which PICkit 2 we wish to talk to
+            Pk2DeviceInfo info = new Pk2DeviceInfo();
+            info.UnitId = "";
+            info.ToolName = "PICkit 2";
+            info.PkobModel = "PKOB";
+            p_ReadHandle = IntPtr.Zero;
+            p_WriteHandle = IntPtr.Zero;
             IntPtr DeviceInfoSet = IntPtr.Zero;
             IntPtr PreparsedDataPointer = IntPtr.Zero;
             HIDP_CAPS Capabilities = new HIDP_CAPS();
@@ -263,8 +266,8 @@ namespace PICkit2V2
                             {
                                 if (DeviceAttributes.ProductID == KONST.Pk2DeviceID)
                                 {
-                                    PICkitFunctions.isPK3 = false;
-                                    PICkitFunctions.isPKOB = false;
+                                    info.IsPk3 = false;
+                                    info.IsPkob = false;
                                 
                                     // Detect if PICkit2 is PK2M
                                     IntPtr ptrBuffer = Marshal.AllocHGlobal(126);
@@ -276,33 +279,33 @@ namespace PICkit2V2
 
                                     if (((byte)productName[0] == 'P') && (productName[1] == 'K') && (productName[2] == '2') && (productName[3] == 'M'))
                                     {
-                                        PICkitFunctions.isPK2M = true;
-                                        PICkitFunctions.ToolName = "PK2M";
+                                        info.IsPk2m = true;
+                                        info.ToolName = "PK2M";
                                     }
                                     else
                                     {
-                                        PICkitFunctions.isPK2M = false;
-                                        PICkitFunctions.ToolName = "PICkit 2";
+                                        info.IsPk2m = false;
+                                        info.ToolName = "PICkit 2";
                                     }
                                 }
                                 else if (DeviceAttributes.ProductID == KONST.Pk3DeviceID)
                                 {
-                                    PICkitFunctions.isPK3 = true;
-                                    PICkitFunctions.isPKOB = false;
-                                    PICkitFunctions.ToolName = "PICkit 3";
+                                    info.IsPk3 = true;
+                                    info.IsPkob = false;
+                                    info.ToolName = "PICkit 3";
                                 }
                                 else
                                 {
-                                    PICkitFunctions.isPK3 = true;
-                                    PICkitFunctions.isPKOB = true;
-                                    PICkitFunctions.ToolName = "PKOB";
+                                    info.IsPk3 = true;
+                                    info.IsPkob = true;
+                                    info.ToolName = "PKOB";
                                     
                                     // Read PKOB model
                                     IntPtr ptrBuffer = Marshal.AllocHGlobal(126);
 
                                     // get Product name string
                                     HidD_GetProductString(l_temp_handle, ptrBuffer, 126);
-                                    PICkitFunctions.pkobDeviceString = Marshal.PtrToStringUni(ptrBuffer, 64);
+                                    info.PkobModel = Marshal.PtrToStringUni(ptrBuffer, 64);
                                     Marshal.FreeHGlobal(ptrBuffer);
 
                                 }
@@ -324,11 +327,11 @@ namespace PICkit2V2
                                         // Unicode conversion turns this to character "CYRILLIC 
                                         // CAPITAL LETTER LJE". So, add an extra check to catch
                                         // it.
-                                        UnitID = "-";    // blank
+                                        info.UnitId = "-";    // blank
                                     }
                                     else
                                     {
-                                        UnitID = unitIDSerial;
+                                        info.UnitId = unitIDSerial;
                                     }
                                     // set return value
                                     p_WriteHandle = l_temp_handle;
@@ -371,7 +374,86 @@ namespace PICkit2V2
             }  // end for
             //Free the memory reserved for the DeviceInfoSet returned by SetupDiGetClassDevs.
             SetupDiDestroyDeviceInfoList(DeviceInfoSet);
-            return l_found_device;
+            info.Found = l_found_device;
+            return info;
+        }
+
+        // Overlapped event and state for the write and read paths. Each path uses a
+        // manual-reset event reused across transfers, created lazily on first use.
+        private Kernel32.OVERLAPPED wrOverlapped;
+        private Kernel32.OVERLAPPED rdOverlapped;
+        private IntPtr wrEvent = IntPtr.Zero;
+        private IntPtr rdEvent = IntPtr.Zero;
+
+        public UsbTransferStatus Write(IntPtr writeHandle, byte[] buffer)
+        {
+            if (writeHandle == IntPtr.Zero)
+                return UsbTransferStatus.Error;
+            if (wrEvent == IntPtr.Zero)
+            {
+                wrEvent = CreateEvent(IntPtr.Zero, true, true, "");
+                wrOverlapped.hEvent = wrEvent;
+                wrOverlapped.Offset = 0;
+                wrOverlapped.OffsetHigh = 0;
+            }
+            int bytesWritten = 0;
+            WriteFile(writeHandle, buffer, buffer.Length, ref bytesWritten, ref wrOverlapped);
+            uint result = WaitForSingleObject(wrEvent, 1000);
+            UsbTransferStatus status;
+            if (result == KONST.WAIT_OBJECT_0)
+            {
+                status = UsbTransferStatus.Success;
+            }
+            else if (result == KONST.WAIT_TIMEOUT)
+            {
+                // Cancel the pending overlapped write before reporting the timeout so the
+                // caller's disconnect policy starts from a quiesced handle.
+                CancelIo(writeHandle);
+                status = UsbTransferStatus.Timeout;
+            }
+            else
+            {
+                status = UsbTransferStatus.Error;
+            }
+            ResetEvent(wrEvent);
+            return status;
+        }
+
+        public UsbTransferStatus Read(IntPtr readHandle, byte[] buffer)
+        {
+            if (readHandle == IntPtr.Zero)
+                return UsbTransferStatus.Error;
+            if (rdEvent == IntPtr.Zero)
+            {
+                rdEvent = CreateEvent(IntPtr.Zero, true, true, "");
+                rdOverlapped.hEvent = rdEvent;
+                rdOverlapped.Offset = 0;
+                rdOverlapped.OffsetHigh = 0;
+            }
+            int bytesRead = 0;
+            ReadFile(readHandle, buffer, buffer.Length, ref bytesRead, ref rdOverlapped);
+            uint result = WaitForSingleObject(rdEvent, 1000);
+            UsbTransferStatus status;
+            if (result == KONST.WAIT_OBJECT_0)
+            {
+                status = UsbTransferStatus.Success;
+            }
+            else if (result == KONST.WAIT_TIMEOUT)
+            {
+                CancelIo(readHandle);
+                status = UsbTransferStatus.Timeout;
+            }
+            else
+            {
+                status = UsbTransferStatus.Error;
+            }
+            ResetEvent(rdEvent);
+            return status;
+        }
+
+        public void Close(IntPtr handle)
+        {
+            CloseHandle(handle);
         }
     }
 }

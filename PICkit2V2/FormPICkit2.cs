@@ -863,8 +863,17 @@ namespace PICkit2V2
 
 		[DllImport("user32.dll")]
 		static extern Int16 FlashWindowEx(ref FLASHWINFO pwfi);
-		[DllImport("user32.dll")]
-		public static extern void DisableProcessWindowsGhosting();      // 22.7.2021, v3.20.05 JAKA
+		[DllImport("user32.dll", EntryPoint = "DisableProcessWindowsGhosting")]
+		static extern void NativeDisableProcessWindowsGhosting();      // 22.7.2021, v3.20.05 JAKA
+
+		// user32.dll exists only on Windows; the native export is absent under Mono on
+		// other platforms, where window ghosting does not occur, so skip the call there
+		public static void DisableProcessWindowsGhosting()
+		{
+			if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+				return;
+			NativeDisableProcessWindowsGhosting();
+		}
 
 		// Start flush mouse events code
 		[StructLayout(LayoutKind.Sequential)]
@@ -1368,13 +1377,17 @@ namespace PICkit2V2
 				pICkit2GoToolStripMenuItem.Visible = true;
 				if (Pk2.isPK2M)
 				{
+					// Mono's file dialog on Linux matches filter globs case-sensitively,
+					// while Windows folds case. The distributed operating system hex files
+					// are named in uppercase, so each filter lists the uppercase prefix
+					// pattern alongside the lowercase one to display them on both platforms.
 					//openFWFile = openFWFilePK2M;
-					openFWFile.Filter = "PK2M 2 OS|pk2mv*.hex|All files|*.*";
+					openFWFile.Filter = "PK2M 2 OS|pk2mv*.hex;PK2MV*.hex|All files|*.*";
 					openFWFile.Title = "Open PK2M Operating System File";
 				}
 				else
 				{
-					openFWFile.Filter = "PICkit 2 OS|pk2v*.hex|All files|*.*";
+					openFWFile.Filter = "PICkit 2 OS|pk2v*.hex;PK2V*.hex|All files|*.*";
 					openFWFile.Title = "Open PICkit 2 Operating System File";
 				}
 
@@ -1410,12 +1423,12 @@ namespace PICkit2V2
 
 				if (!Pk2.isPKOB)
 				{
-					openFWFile.Filter = "PICkit 3 OS|pk3os*.hex|All files|*.*";
+					openFWFile.Filter = "PICkit 3 OS|pk3os*.hex;PK3OS*.hex|All files|*.*";
 					openFWFile.Title = "Open PICkit 3 Operating System File";
 				}
 				else
 				{
-					openFWFile.Filter = "PKOB OS|pk3os*.hex|All files|*.*";
+					openFWFile.Filter = "PKOB OS|pk3os*.hex;PK3OS*.hex|All files|*.*";
 					openFWFile.Title = "Open PKOB Operating System File";
 				}
 			}
@@ -7487,7 +7500,11 @@ namespace PICkit2V2
 				displayStatusWindow.BackColor = Color.SteelBlue;
 				this.Update();
 
-				res = Pk3h.WriteProgrammerOs(KONST.BLFileNamePk3, 0x23);
+				// The bootloader hex is a companion of the operating system hex and resides in the
+				// same directory. Resolve it against the selected operating system file's directory
+				// rather than the process working directory.
+				string bootloaderPath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(openFWFile.FileName), KONST.BLFileNamePk3);
+				res = Pk3h.WriteProgrammerOs(bootloaderPath, 0x23);
 
 				//TODO: better way to choose bootloader
 				if (res != KONST.PICkit2USB.bootloader)

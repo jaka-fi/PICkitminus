@@ -441,7 +441,10 @@ namespace PICkit2V2
             else if (zoom == 3)
                 length = 4096;
 
-            Bitmap gridmap = new Bitmap(length, width, PixelFormat.Format16bppRgb555);
+            // Graphics.FromImage requires a 24/32bpp surface. libgdiplus on Linux returns a
+            // GDI+ OutOfMemory status when constructing a Graphics over a 16bpp bitmap, where
+            // Windows GDI+ tolerates it. A 24bpp RGB surface is drawable on both backends.
+            Bitmap gridmap = new Bitmap(length, width, PixelFormat.Format24bppRgb);
             Graphics graphics = Graphics.FromImage(gridmap);
             SolidBrush brush = new SolidBrush(Color.Black);
             graphics.FillRectangle(brush, 0, 0, length, width);

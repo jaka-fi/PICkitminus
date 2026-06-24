@@ -8,7 +8,6 @@ using System.Windows.Forms;
 using System.Threading;
 using Pk2 = PICkit2V2.PICkitFunctions;
 using KONST = PICkit2V2.Constants;
-using USB = PICkit2V2.USB;
 
 namespace PICkit2V2
 {
