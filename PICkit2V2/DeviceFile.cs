@@ -68,7 +68,8 @@ namespace PICkit2V2
             public uint ProgramMem;
             public ushort EEMem;
             public uint EEAddr;
-            public byte ConfigWords;
+            // public byte ConfigWords;
+            public int ConfigWords;
             public uint ConfigAddr;             // HEX
             public byte UserIDWords;
             public uint UserIDAddr;             // HEX

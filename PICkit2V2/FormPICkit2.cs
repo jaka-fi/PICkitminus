@@ -756,7 +756,13 @@ using Pk3h = PICkit2V2.PK3Helpers;
 // version 3.28.04 - 9 Nov 2025 JAKA
 // Bug Fix: Fix writing last config word on PIC18F, PIC18F_K and PIC18F_K90_K80_K22
 //          families if WRTC bit is enabled
-
+//
+// version 3.28.05 - 30 Dec 2025 JAKA
+// Bug Fix: Bump required PK3 firmware version number to 2.32.04. Includes
+//          Atmel SPI FLASH support for P2G and dsPIC33A script commands.
+// Bug Fix: If autosearch on startup is disabled, don't use autosearch on PICkit
+//          operating system update either
+// Bug Fix: Fix programmer-to-go memory size check for PICkit3
 
 namespace PICkit2V2
 {
@@ -817,6 +823,7 @@ namespace PICkit2V2
 		private static string oriText;
 		private DialogVDDErase dialogVddErase = new DialogVDDErase();
 		private DialogUserIDs dialogIDMemory;
+		private DialogConfigMem dialogConfigMemory;
 		private KONST.VddTargetSelect VddTargetSave = KONST.VddTargetSelect.auto;
 		private DialogUART uartWindow = new DialogUART();
 		private DialogLogic logicWindow = new DialogLogic();
@@ -2509,7 +2516,7 @@ namespace PICkit2V2
 					}
 					rowAddressIncrement = addressIncrement * (dataColumns / 2);
 				}
-				if (Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue > 0xFFFFFF || Pk2.PartHasAuxFlash())
+				if ((Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue > 0xFFFFFF && !Pk2.FamilyIsdsPIC33AK()) || Pk2.PartHasAuxFlash())
 				{ // PIC32 - add rows for memory section titles
 					rowCount += 2;
 				}
@@ -2543,7 +2550,27 @@ namespace PICkit2V2
 				int bootMemP32 = (int)Pk2.DevFile.PartsList[Pk2.ActivePart].BootFlash;
 				progMemP32 -= bootMemP32; // boot flash at upper end of prog mem.
 				progMemP32 /= hexColumns;
-				if (Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue > 0xFFFFFF)
+
+				if (Pk2.FamilyIsdsPIC33AK())
+				{
+
+					dataGridProgramMemory.ShowCellToolTips = true;
+					for (int row = 0, address = (int)KONST.P33AK_PROGRAM_FLASH_START_ADDR; row < dataGridProgramMemory.RowCount; row++)
+					//for (int row = 0, address = (int)KONST.P33AK_PROGRAM_FLASH_START_ADDR; row < progMemP32; row++)
+						{
+							dataGridProgramMemory[0, row].Value = string.Format(addressFormat, address);
+						dataGridProgramMemory[0, row].Style.BackColor = System.Drawing.SystemColors.ControlLight;
+						address += rowAddressIncrement;
+					}
+					/*
+					for (int row = 0, address = (int)KONST.P33AK_PROGRAM_FLASH_START_ADDR; row <= progMemP32; row++)
+					{
+						dataGridProgramMemory[0, row].Value = string.Format(addressFormat, address);
+						dataGridProgramMemory[0, row].Style.BackColor = System.Drawing.SystemColors.ControlLight;
+						address += rowAddressIncrement;
+					}*/
+				}
+				else if (Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue > 0xFFFFFF)
 				{ // PIC32 - insert titles
 					dataGridProgramMemory.ShowCellToolTips = false;
 					// Program Flash addresses
@@ -2572,6 +2599,7 @@ namespace PICkit2V2
 						dataGridProgramMemory[0, row].Style.BackColor = System.Drawing.SystemColors.ControlLight;
 						address += rowAddressIncrement;
 					}
+					
 				}
 				else if (Pk2.PartHasAuxFlash())
 				{ // PIC24/dsPIC with Auxiliary flash - insert titles
@@ -2638,7 +2666,7 @@ namespace PICkit2V2
 					dataFormat = "{0:X8}";
 					asciiBytes = 4;
 				}
-				if (Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue > 0xFFFFFF || Pk2.PartHasAuxFlash())
+				if ((Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue > 0xFFFFFF && !Pk2.FamilyIsdsPIC33AK()) || Pk2.PartHasAuxFlash())
 				{ // PIC32
 				  // Program Flash
 					int idx = 0;
@@ -2668,12 +2696,14 @@ namespace PICkit2V2
 				}
 				else
 				{
-					for (int row = 0, idx = 0; row < (dataGridProgramMemory.RowCount - 1); row++)
+					int toolTipOffset = 0;
+					if (Pk2.FamilyIsdsPIC33AK())
+						toolTipOffset = (int)KONST.P33AK_PROGRAM_FLASH_START_ADDR; for (int row = 0, idx = 0; row < (dataGridProgramMemory.RowCount - 1); row++)
 					{ // all except last row
 						for (int col = 0; col < hexColumns; col++)
 						{
 							dataGridProgramMemory[col + 1, row].ToolTipText =
-								string.Format(addressFormat, (idx * addressIncrement));
+								string.Format(addressFormat, (idx * addressIncrement + toolTipOffset));
 							dataGridProgramMemory[col + 1, row].Value =
 								string.Format(dataFormat, Pk2.DeviceBuffers.ProgramMemory[idx++]);
 						}
@@ -2688,18 +2718,20 @@ namespace PICkit2V2
 				{
 					lastcol = hexColumns;
 				}
-				if (Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue > 0xFFFFFF || Pk2.PartHasAuxFlash())
+				if ((Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue > 0xFFFFFF && !Pk2.FamilyIsdsPIC33AK()) || Pk2.PartHasAuxFlash())
 				{ // PIC32
 				  // "last row" not used for PIC32
 				}
 				else
 				{
-					for (int col = 0; col < hexColumns; col++)
+					int toolTipOffset = 0;
+					if (Pk2.FamilyIsdsPIC33AK())
+						toolTipOffset = (int)KONST.P33AK_PROGRAM_FLASH_START_ADDR; for (int col = 0; col < hexColumns; col++)
 					{ // fill last row
 						if (col < lastcol)
 						{
 							dataGridProgramMemory[col + 1, lastrow].ToolTipText =
-								string.Format(addressFormat, (rowidx * addressIncrement));
+								string.Format(addressFormat, (rowidx * addressIncrement + toolTipOffset));
 							dataGridProgramMemory[col + 1, lastrow].Value =
 								string.Format(dataFormat, Pk2.DeviceBuffers.ProgramMemory[rowidx++]);
 						}
@@ -3836,7 +3868,6 @@ namespace PICkit2V2
 						else
 						{
 							Pk2.DownloadAddress3(0);
-							//Pk2.DownloadAddress3(0x800000);
 							Pk2.RunScript(KONST.PROGMEM_ADDRSET, 1);
 						}
 					}
@@ -4067,7 +4098,14 @@ namespace PICkit2V2
 				displayStatusWindow.Text += "Config... ";
 				//displayStatusWindow.Update();
 				this.Update();
-				Pk2.ReadConfigOutsideProgMem();
+				if (Pk2.FamilyIsdsPIC33AK())
+                {
+					Pk2.ReadConfigOutsideProgMemWithAddress();
+                }
+                else
+                {
+					Pk2.ReadConfigOutsideProgMem();
+				}
 
 				// save bandgap if necessary
 				if (Pk2.DevFile.PartsList[Pk2.ActivePart].BandGapMask > 0)
@@ -6904,7 +6942,14 @@ namespace PICkit2V2
 									{
 										if (Pk2.FamilyIsEEPROM())
 										{
-											displayStatusWindow.Text = "Verification of EEPROM failed at address\n";
+											if (Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigMasks[KONST.PROTOCOL_CFG] == KONST.SPI_FLASH_BUS)
+                                            {
+												displayStatusWindow.Text = "Verification of FLASH failed at address\n";
+											}
+                                            else
+                                            {
+												displayStatusWindow.Text = "Verification of EEPROM failed at address\n";
+											}
 										}
 										else
 										{
@@ -7430,7 +7475,7 @@ namespace PICkit2V2
 				}
 				fullEnableGUIControls();
 			}
-			else if (Pk2.DetectDevice(KONST.SEARCH_ALL_FAMILIES, true, chkBoxVddOn.Checked, this))
+			else if (searchOnStartup && Pk2.DetectDevice(KONST.SEARCH_ALL_FAMILIES, true, chkBoxVddOn.Checked, this))
 			{
 				setGUIVoltageLimits(true);
 				Pk2.SetVDDVoltage((float)numUpDnVDD.Value, 0.85F, false);
@@ -7559,7 +7604,22 @@ namespace PICkit2V2
 
 			lookForPoweredTarget(KONST.NoMessage);
 
-			if (Pk2.DetectDevice(KONST.SEARCH_ALL_FAMILIES, true, chkBoxVddOn.Checked, this))
+			if (!Pk2.DevFile.Families[Pk2.GetActiveFamily()].PartDetect)
+			{
+				Pk2.PrepNewPart(true);  // 6.2.2023
+				setGUIVoltageLimits(true);
+				Pk2.SetVDDVoltage((float)numUpDnVDD.Value, 0.85F, false);
+				if (Pk2.DevFile.Families[Pk2.GetActiveFamily()].DeviceIDMask == 0)
+				{
+					displayStatusWindow.Text = displayStatusWindow.Text + "\n[Parts in this family are not auto-detect.]";
+				}
+				else if (toolStripMenuItemManualSelect.Checked)
+				{
+					displayStatusWindow.Text = displayStatusWindow.Text + "\n[Manual Device Select active.]";
+				}
+				fullEnableGUIControls();
+			}
+			else if (searchOnStartup && Pk2.DetectDevice(KONST.SEARCH_ALL_FAMILIES, true, chkBoxVddOn.Checked, this))
 			{
 				setGUIVoltageLimits(true);
 				if (Pk2.FamilyIsEEPROM())
@@ -10401,7 +10461,7 @@ namespace PICkit2V2
 					memMax = 131072 * (2 << (ptgMemory - 1)); // 256K and above memory limits ===== 
 
 				if (Pk2.isPK3)				// PICkit3 has 4 Mbit SPI FLASH
-					memMax = 4194304;
+					memMax = 524288;		// Fixed 6.1.2026 - should be in bytes, not bits!
 
 				if (endOfBuffer > memMax)
 				{
@@ -11053,25 +11113,47 @@ namespace PICkit2V2
 
 		private void labelConfig_Click(object sender, EventArgs e)
 		{
-			DialogConfigEdit configEditor = new DialogConfigEdit();
-			configEditor.ScalefactW = ScalefactW;
-			configEditor.ScalefactH = ScalefactH;
-			if (as0BitValueToolStripMenuItem.Checked)
-				configEditor.SetDisplayMask(0);
-			else if (as1BitValueToolStripMenuItem.Checked)
-				configEditor.SetDisplayMask(1);
-			else
-				configEditor.SetDisplayMask(2);
-			configEditor.ShowDialog();
-
-			if (ConfigsEdited)
+			if (Pk2.DevFile.PartsList[Pk2.ActivePart].ConfigWords > 9)
 			{
-				displayDataSource.Text = "Edited.";
-				bufferSource = "Edited.";
-				checkImportFile = false;
-				ConfigsEdited = false;
-			}
+				if (!DialogConfigMem.ConfigMemOpen)
+				{
+					dialogConfigMemory = new DialogConfigMem();
+					if (Pk2.PartHasCustomerOTP())
+					{
+						dialogConfigMemory.Text = "Customer OTP memory";
+					}
+					else
+					{
+						dialogConfigMemory.Text = "Jakan config";
+					}
+					dialogConfigMemory.Show();
+				
+				}
 
+
+
+			}
+			else
+			{
+				DialogConfigEdit configEditor = new DialogConfigEdit();
+				configEditor.ScalefactW = ScalefactW;
+				configEditor.ScalefactH = ScalefactH;
+				if (as0BitValueToolStripMenuItem.Checked)
+					configEditor.SetDisplayMask(0);
+				else if (as1BitValueToolStripMenuItem.Checked)
+					configEditor.SetDisplayMask(1);
+				else
+					configEditor.SetDisplayMask(2);
+				configEditor.ShowDialog();
+
+				if (ConfigsEdited)
+				{
+					displayDataSource.Text = "Edited.";
+					bufferSource = "Edited.";
+					checkImportFile = false;
+					ConfigsEdited = false;
+				}
+			}
 			// display any changes.
 			updateGUI(KONST.UpdateMemoryDisplays, KONST.EnableMclrCheckBox, KONST.UpdateProtections);
 		}

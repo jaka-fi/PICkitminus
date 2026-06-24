@@ -96,6 +96,18 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DialogConfigMem.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="DialogConfigMem.Designer.cs">
+      <DependentUpon>DialogConfigMem.cs</DependentUpon>
+    </Compile>
+    <Compile Include="DialogUserIDs.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="DialogUserIDs.Designer.cs">
+      <DependentUpon>DialogUserIDs.cs</DependentUpon>
+    </Compile>
     <Compile Include="Kernel32OVERLAPPED.cs" />
     <Compile Include="PK3Helpers.cs" />
     <Compile Include="Constants.cs" />
@@ -173,12 +185,6 @@
     <Compile Include="DialogUnitSelect.Designer.cs">
       <DependentUpon>DialogUnitSelect.cs</DependentUpon>
     </Compile>
-    <Compile Include="DialogUserIDs.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="DialogUserIDs.Designer.cs">
-      <DependentUpon>DialogUserIDs.cs</DependentUpon>
-    </Compile>
     <Compile Include="dsPIC33_PE.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -233,6 +239,10 @@
       <SubType>Designer</SubType>
       <DependentUpon>DialogConfigEdit.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="DialogConfigMem.resx">
+      <DependentUpon>DialogConfigMem.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
     <EmbeddedResource Include="DialogCustomBaud.resx">
       <SubType>Designer</SubType>
       <DependentUpon>DialogCustomBaud.cs</DependentUpon>
@@ -270,8 +280,8 @@
       <DependentUpon>DialogUnitSelect.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="DialogUserIDs.resx">
-      <SubType>Designer</SubType>
       <DependentUpon>DialogUserIDs.cs</DependentUpon>
+      <SubType>Designer</SubType>
     </EmbeddedResource>
     <EmbeddedResource Include="FormMultiWinEEData.resx">
       <SubType>Designer</SubType>

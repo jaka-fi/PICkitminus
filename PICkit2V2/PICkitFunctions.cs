@@ -119,8 +119,9 @@ namespace PICkit2V2
 
 			bool ret = false;
 			ret = writeUSB(commandArray);
-			
-			if (isPK3)
+
+			// if (isPK3)
+			if (memsize > 1)			// Memsize > 256k (2 Mbit) usually requires SPI FLASH
 				Thread.Sleep(5000);     // Wait for FLASH erase
 
 			if (ret)
@@ -885,7 +886,7 @@ namespace PICkit2V2
 					config = reverse16Bits(config);
 					if (DevFile.PartsList[ActivePart].IgnoreBytes == 0x000C
 						|| (DevFile.PartsList[ActivePart].ProgMemPanelBufs & 0x02) == 0x02)    // Q40,Q41,Q43,Q71,Q83,Q84 configuration is read/written byte at a time
-							config = swap2Bytes(config);
+						config = swap2Bytes(config);
 					//if (word == (DevFile.PartsList[ActivePart].IgnoreAddress - DevFile.PartsList[ActivePart].ConfigAddr) / DevFile.Families[GetActiveFamily()].BytesPerLocation)
 					//	config |= 0xff00;                       // Some compilers put 0xff to non-existing config byte. Use same when reading out, then the exported hex file matches the original.
 				}
@@ -896,6 +897,64 @@ namespace PICkit2V2
 				}
 				DeviceBuffers.ConfigWords[word] = config;
 			}
+		}
+
+		public static void ReadConfigOutsideProgMemWithAddress()
+		{
+			RunScript(KONST.PROG_ENTRY, 1);
+			DownloadAddress3Raw((int)DevFile.PartsList[ActivePart].ConfigAddr);
+			RunScript(KONST.PROGMEM_ADDRSET, 1);
+
+			byte[] upload_buffer = new byte[KONST.UploadBufferSize];
+
+			int bytesPerWord = DevFile.Families[GetActiveFamily()].BytesPerLocation;
+			int scriptRunsToFillUpload = KONST.UploadBufferSize /
+				(DevFile.PartsList[ActivePart].ProgMemRdWords * bytesPerWord);
+			int wordsPerLoop = scriptRunsToFillUpload * DevFile.PartsList[ActivePart].ProgMemRdWords;
+			int wordsRead = 0;
+
+			int endOfBuffer = (int)DevFile.PartsList[ActivePart].ConfigWords;
+
+			//progressBar1.Value = 0;     // reset bar
+			//progressBar1.Maximum = endOfBuffer / wordsPerLoop;
+
+			do
+			{
+				RunScriptUploadNoLen(KONST.PROGMEM_RD, scriptRunsToFillUpload);
+
+				Array.Copy(Usb_read_array, 1, upload_buffer, 0, KONST.USB_REPORTLENGTH);
+				UploadDataNoLen();
+				Array.Copy(Usb_read_array, 1, upload_buffer, KONST.USB_REPORTLENGTH, KONST.USB_REPORTLENGTH);
+				int uploadIndex = 0;
+				for (int word = 0; word < wordsPerLoop; word++)
+				{
+					int bite = 0;
+					uint memWord = (uint)upload_buffer[uploadIndex + bite++];
+					if (bite < bytesPerWord)
+					{
+						memWord |= (uint)upload_buffer[uploadIndex + bite++] << 8;
+					}
+					if (bite < bytesPerWord)
+					{
+						memWord |= (uint)upload_buffer[uploadIndex + bite++] << 16;
+					}
+					if (bite < bytesPerWord)
+					{
+						memWord |= (uint)upload_buffer[uploadIndex + bite++] << 24;
+					}
+					uploadIndex += bite;
+
+					DeviceBuffers.ConfigWords[wordsRead++] = memWord;
+					//DeviceBuffers.ConfigWords[wordsRead++] = (uint)wordsRead;
+					if (wordsRead == DevFile.PartsList[ActivePart].ConfigWords)
+					{
+						break; // for cases where ProgramMemSize%WordsPerLoop != 0
+					}
+				}
+				// progressBar1.PerformStep();
+			} while (wordsRead < endOfBuffer && !FormPICkit2.stopOperation);
+
+			RunScript(KONST.PROG_EXIT, 1);
 		}
 
 		public static void ReadBandGap()
@@ -1795,7 +1854,9 @@ namespace PICkit2V2
 							DevFile.PartsList[l_x].ProgramMem = binRead.ReadUInt32();
 							DevFile.PartsList[l_x].EEMem = binRead.ReadUInt16();
 							DevFile.PartsList[l_x].EEAddr = binRead.ReadUInt32();
-							DevFile.PartsList[l_x].ConfigWords = binRead.ReadByte();
+							DevFile.PartsList[l_x].ConfigWords = binRead.ReadByte();    // ConfigWords is int in SW but byte in Device File
+							if (DevFile.PartsList[l_x].ConfigWords == 250)
+								DevFile.PartsList[l_x].ConfigWords = 2048;
 							DevFile.PartsList[l_x].ConfigAddr = binRead.ReadUInt32();
 							DevFile.PartsList[l_x].UserIDWords = binRead.ReadByte();
 							DevFile.PartsList[l_x].UserIDAddr = binRead.ReadUInt32();
@@ -2185,10 +2246,42 @@ namespace PICkit2V2
 			commandArray[0] = KONST.CLR_DOWNLOAD_BUFFER;
 			commandArray[1] = KONST.DOWNLOAD_DATA;
 			commandArray[2] = 3;
+
+
+			if (FamilyIsdsPIC33AK())
+			{
+				address += (int)KONST.P33AK_PROGRAM_FLASH_START_ADDR;
+			}
+
 			if (DevFile.Families[GetActiveFamily()].FamilyName == "Midrange/1.8V Min MSB1st" ||
 				DevFile.Families[GetActiveFamily()].FamilyName == "PIC18/PIC18F MSB1st")
 			{
-				address <<= 1;	// add stop bit
+				address <<= 1;  // add stop bit
+				commandArray[3] = (byte)reverse8Bits((uint)(0xFF & (address >> 16)));
+				commandArray[4] = (byte)reverse8Bits((uint)(0xFF & (address >> 8)));
+				commandArray[5] = (byte)reverse8Bits((uint)(address & 0xFF));
+			}
+			else
+			{
+				commandArray[3] = (byte)(address & 0xFF);
+				commandArray[4] = (byte)(0xFF & (address >> 8));
+				commandArray[5] = (byte)(0xFF & (address >> 16));
+			}
+			return writeUSB(commandArray);
+		}
+
+		public static bool DownloadAddress3Raw(int address)
+		{
+			byte[] commandArray = new byte[6];
+			commandArray[0] = KONST.CLR_DOWNLOAD_BUFFER;
+			commandArray[1] = KONST.DOWNLOAD_DATA;
+			commandArray[2] = 3;
+
+
+			if (DevFile.Families[GetActiveFamily()].FamilyName == "Midrange/1.8V Min MSB1st" ||
+				DevFile.Families[GetActiveFamily()].FamilyName == "PIC18/PIC18F MSB1st")
+			{
+				address <<= 1;  // add stop bit
 				commandArray[3] = (byte)reverse8Bits((uint)(0xFF & (address >> 16)));
 				commandArray[4] = (byte)reverse8Bits((uint)(0xFF & (address >> 8)));
 				commandArray[5] = (byte)reverse8Bits((uint)(address & 0xFF));

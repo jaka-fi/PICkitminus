@@ -7,7 +7,7 @@ namespace PICkit2V2
 	public class Constants
 	{
 		// APPLICATION VERSION
-		public const string AppVersion = "3.28.04";
+		public const string AppVersion = "3.28.05";
 		public const byte DevFileCompatLevel = 6;
 		public const byte DevFileCompatLevelMin = 0;
 		public const string UserGuideFileNamePK2 = "\\PICkit2 User Guide 51553E.pdf";
@@ -28,10 +28,10 @@ namespace PICkit2V2
 		// min firmware version Pk3 / PKOB
 		public const byte FWVerMajorReqPk3 = 2;
 		public const byte FWVerMinorReqPk3 = 32;
-		public const byte FWVerDotReqPk3 = 2;
-		public const string FWFileNamePk3 = "PK3OSV023202.hex";
+		public const byte FWVerDotReqPk3 = 4;
+		public const string FWFileNamePk3 = "PK3OSV023203.hex";
 		public const string BLFileNamePk3 = "PK3BLV011405.hex"; // matches the MPLAB bootlaoder version number
-		public const string FWFileNamePkob = "PK3OSV023202.hex";
+		public const string FWFileNamePkob = "PK3OSV023203.hex";
 
 		public const uint PACKET_SIZE = 65; // 64 + leading 0
 		public const uint USB_REPORTLENGTH = 64;

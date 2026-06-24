@@ -212,14 +212,14 @@ namespace PICkit2V2
             { // mem size not an even divider, need an extra row
                 numRows++;
             }
-            if (blankValue == 0xFFFFFFFF || Pk2.PartHasAuxFlash())
+            if ((blankValue == 0xFFFFFFFF && !Pk2.FamilyIsdsPIC33AK()) || Pk2.PartHasAuxFlash())
             {
                 numRows+= 2;
             }
             dataGridProgramMemory.RowCount = (int)numRows;
             // fill address column
             int rowAddrIncrement = maxCols * (int)Pk2.DevFile.Families[Pk2.GetActiveFamily()].AddressIncrement;
-            if (blankValue == 0xFFFFFFFF)
+            if (blankValue == 0xFFFFFFFF && !Pk2.FamilyIsdsPIC33AK())
             {// PIC32
                 int progMemP32 = (int)Pk2.DevFile.PartsList[Pk2.ActivePart].ProgramMem;
                 int bootMemP32 = (int)Pk2.DevFile.PartsList[Pk2.ActivePart].BootFlash;
@@ -293,8 +293,11 @@ namespace PICkit2V2
             }
             else
             {
+                int addr = 0;
+                if (Pk2.FamilyIsdsPIC33AK())
+                    addr = (int)KONST.P33AK_PROGRAM_FLASH_START_ADDR;
                 dataGridProgramMemory.ShowCellToolTips = true;
-                for (int row = 0, addr = 0; row < numRows; row++)
+                for (int row = 0; row < numRows; row++)
                 {
                         dataGridProgramMemory[0, row].Value = string.Format(addrFormat, addr);
                         dataGridProgramMemory[0, row].ReadOnly = true;
@@ -344,7 +347,7 @@ namespace PICkit2V2
             if (lastCol == 0)
                 lastCol = numCols;
             int rowidx = numRows * numCols;                
-            if (blankValue == 0xFFFFFFFF || Pk2.PartHasAuxFlash())
+            if ((blankValue == 0xFFFFFFFF && !Pk2.FamilyIsdsPIC33AK()) || Pk2.PartHasAuxFlash())
             {
                 // Program Flash
                 int idx = 0;
@@ -385,12 +388,15 @@ namespace PICkit2V2
             }
             else
             {
+                int toolTipOffset = 0;
+                if (Pk2.FamilyIsdsPIC33AK())
+                    toolTipOffset = (int)KONST.P33AK_PROGRAM_FLASH_START_ADDR;
                 for (int i = 0, idx = 0, address = 0; i < numRows; i++)
                 {
                     for (int j = 1; j <= numCols; j++)
                     {
                         dataGridProgramMemory[j, i].Value = string.Format(dataFormat, Pk2.DeviceBuffers.ProgramMemory[idx++]);
-                        dataGridProgramMemory[j, i].ToolTipText = string.Format(addrFormat, (address));
+                        dataGridProgramMemory[j, i].ToolTipText = string.Format(addrFormat, (address + toolTipOffset));
                         address += addressIncrement;
                     }
                 }
@@ -400,7 +406,7 @@ namespace PICkit2V2
                     if (j <= lastCol)
                     {
                         dataGridProgramMemory[j, numRows].Value = string.Format(dataFormat, Pk2.DeviceBuffers.ProgramMemory[rowidx]);
-                        dataGridProgramMemory[j, numRows].ToolTipText = string.Format(addrFormat, (rowidx++ * addressIncrement));
+                        dataGridProgramMemory[j, numRows].ToolTipText = string.Format(addrFormat, (rowidx++ * addressIncrement + toolTipOffset));
                     }
                     else
                     {
