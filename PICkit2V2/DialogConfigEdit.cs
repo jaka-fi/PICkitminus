@@ -17,7 +17,7 @@ namespace PICkit2V2
         private int displayMask; // 0 = unimplimented bits to 0, 1 = as '1', 2 = as read
         private const int K_MAXCONFIGS = 9;
 
-        private byte editConfigWords = K_MAXCONFIGS;   // We adjust max K_MAXCONFIGS words
+        private int editConfigWords = K_MAXCONFIGS;   // We adjust max K_MAXCONFIGS words
 
         private struct config {
             public Panel configPanel;

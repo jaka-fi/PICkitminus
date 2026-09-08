@@ -14,7 +14,7 @@ namespace PICkit2V2
         public uint OSCCAL;
         public uint BandGap;
        
-        public DeviceData(uint progMemSize, uint auxMemorySize, ushort eeMemSize, byte numConfigs, ushort numIDs, 
+        public DeviceData(uint progMemSize, uint auxMemorySize, ushort eeMemSize, int numConfigs, ushort numIDs, 
                             uint memBlankVal, int eeBytes, int idBytes, ushort[] configBlank, uint OSCCALInit)
         {   // Overloaded Constructor
             ProgramMemory = new uint[progMemSize];

@@ -81,7 +81,7 @@ namespace PICkit2V2
                     //bootMemStart = Constants.P32_BOOT_FLASH_START_ADDR;
                     //progMemSizeBytes -= (int)bootMemSize * bytesPerWord;
                     progMemSizeBytes += (int)programMemStart;
-                    cfgBytesPerWord = 2;
+                    //cfgBytesPerWord = 2;
                 }
                 uint bootMemEnd = bootMemStart + (bootMemSize * (uint)bytesPerWord);   
                 int bootArrayStart = (int)(Pk2.DevFile.PartsList[Pk2.ActivePart].ProgramMem - bootMemSize);
@@ -369,7 +369,7 @@ namespace PICkit2V2
                     }
                     for (int cw = 0; cw < configWords; cw++)
                     {
-                        if (!configLoaded[cw])
+                        if (!configLoaded[cw] && !Pk2.FamilyIsdsPIC33AK())    // Don't give warning for 33AK because of vast config range
                         {
                             // apply mask to dsPIC33/PIC24HJ config 8 to make sure JTAG bit is cleared
                             if ((Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue == 0xFFFFFF) && (configWords > 7))
@@ -728,7 +728,8 @@ namespace PICkit2V2
             if (progMem)
             {
                 int cfgBytesPerWord = bytesPerWord;
-                if (Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue > 0xFFFFFF)
+                //if (Pk2.DevFile.Families[Pk2.GetActiveFamily()].BlankValue > 0xFFFFFF)
+                if (Pk2.FamilyIsPIC32())
                 { // PIC32
                     cfgBytesPerWord = 2;
                 }

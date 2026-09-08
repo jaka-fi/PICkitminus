@@ -62,7 +62,7 @@ namespace PICkit2V2
         {
             ptgMemory = value;
             if (Pk2.isPK3)
-                ptgMemory = 5;
+                ptgMemory = 2;
             if ((ptgMemory > 0) && (ptgMemory <= 5))
                 label256K.Visible = true;
             //===== Display what will be used for PTG =====
