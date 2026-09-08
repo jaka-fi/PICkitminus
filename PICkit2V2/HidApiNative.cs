@@ -10,6 +10,9 @@ namespace PICkit2V2
     // bindings are correct under both 32-bit and 64-bit runtimes.
     internal static class HidApiNative
     {
+        // Declare Func<,> to support .NET 2.0
+        public delegate TResult Func<T, TResult>(T arg);
+
         private const string Library = "hidapi";
 
         // Mirrors struct hid_device_info from hidapi.h. Pointer members are held as
